@@ -1,0 +1,118 @@
+{
+  "manifest_version": 3,
+  "name": "飛雷神 Hiraishin",
+  "version": "0.2.0",
+  "description": "按住 Option / Alt 甩动轮盘，快速切换、整理和复制标签页，把选中文字发送到 ChatGPT / Claude。",
+  "minimum_chrome_version": "121",
+  "permissions": [
+    "tabs",
+    "tabGroups",
+    "storage",
+    "scripting",
+    "activeTab",
+    "contextMenus",
+    "notifications",
+    "alarms",
+    "offscreen",
+    "clipboardWrite"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "incognito": "not_allowed",
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "飛雷神 Hiraishin",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png",
+      "48": "icons/48.png",
+      "128": "icons/128.png"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "commands": {
+    "history-back": {
+      "description": "Tab 访问历史：后退",
+      "suggested_key": {
+        "default": "Ctrl+Comma",
+        "mac": "MacCtrl+Comma"
+      }
+    },
+    "history-forward": {
+      "description": "Tab 访问历史：前进",
+      "suggested_key": {
+        "default": "Ctrl+Period",
+        "mac": "MacCtrl+Period"
+      }
+    },
+    "switch-previous-tab": {
+      "description": "切回上一 Tab"
+    },
+    "close-right": {
+      "description": "关闭当前 Tab 右侧的所有未固定标签页"
+    },
+    "move-tab-left": {
+      "description": "当前 Tab 左移"
+    },
+    "move-tab-right": {
+      "description": "当前 Tab 右移"
+    },
+    "move-tab-first": {
+      "description": "当前 Tab 移到最左"
+    },
+    "move-tab-last": {
+      "description": "当前 Tab 移到最右"
+    },
+    "move-to-new-window": {
+      "description": "当前 Tab 移到新窗口"
+    },
+    "move-with-left-to-new-window": {
+      "description": "当前及左侧 Tabs 移到新窗口"
+    },
+    "move-with-right-to-new-window": {
+      "description": "当前及右侧 Tabs 移到新窗口"
+    },
+    "duplicate-tab": {
+      "description": "复制标签页"
+    },
+    "copy-links": {
+      "description": "复制链接"
+    },
+    "copy-links-markdown": {
+      "description": "复制为 Markdown 链接"
+    },
+    "go-to-chatgpt": {
+      "description": "前往 ChatGPT"
+    },
+    "send-chatgpt": {
+      "description": "发送到 ChatGPT"
+    },
+    "go-to-claude": {
+      "description": "前往 Claude"
+    },
+    "send-claude": {
+      "description": "发送到 Claude"
+    },
+    "go-to-default-target": {
+      "description": "前往 默认目标"
+    },
+    "send-default-target": {
+      "description": "发送到 默认目标"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Hiraishin fixture</title></head><body>
+<h1>Hiraishin test tab</h1>
+<pre id="text">第一行内容
+第二行内容
+第三行 code()</pre>
+<input placeholder="Keyboard test">
+<!-- Half plain text on white, half saturated colour: a frosted overlay behaves completely
+     differently over the two, and the wheel is wide enough to sit on both at once. -->
+<div class="lines" aria-hidden="true">
+  <p>Frosted surfaces have nothing to work with over plain white pages.</p>
+  <p>磨砂面在纯白页面上没有东西可糊，模糊的结果依然接近白色。</p>
+  <p>The only thing a blur can show there is the smear of the text itself.</p>
+  <p>所以这半边留着文字，用来检查模糊后还能不能看出字的痕迹。</p>
+  <p>Frosted surfaces have nothing to work with over plain white pages.</p>
+  <p>磨砂面在纯白页面上没有东西可糊，模糊的结果依然接近白色。</p>
+  <p>The only thing a blur can show there is the smear of the text itself.</p>
+  <p>所以这半边留着文字，用来检查模糊后还能不能看出字的痕迹。</p>
+</div>
+<div class="swatches" aria-hidden="true">
+  <i style="background:#e0a94a"></i><i style="background:#6f9bd8"></i><i style="background:#7fb06a"></i>
+  <i style="background:#c8634f"></i><i style="background:#2f3b28"></i><i style="background:#d9c07f"></i>
+  <i style="background:#5ec8c8"></i><i style="background:#8a5fa8"></i><i style="background:#e8e2d2"></i>
+</div>
+<style>
+  .swatches { position: fixed; inset: 120px 0 0 50%; display: grid; z-index: -1;
+    grid-template-columns: repeat(2, 1fr); grid-auto-rows: 1fr; gap: 10px; padding: 10px; }
+  .lines { position: fixed; inset: 120px 50% 0 0; z-index: -1; padding: 10px 16px;
+    font: 15px/1.9 -apple-system, "PingFang SC", sans-serif; color: #222; }
+  .lines p { margin: 0 0 14px; }
+  .swatches i { display: block; border-radius: 14px; }
+</style>
+<script>document.title = new URL(location.href).searchParams.get('title') || 'Hiraishin fixture'; document.querySelector('h1').textContent = document.title;</script>
+</body></html>

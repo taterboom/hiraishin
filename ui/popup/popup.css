@@ -1,0 +1,34 @@
+:root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  color: #292d25; background: #f7f6f0; font-size: 12px; line-height: 1.5; }
+* { box-sizing: border-box; }
+body { margin: 0; width: 384px; max-height: 600px; overflow-y: auto; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:disabled { cursor: default; }
+button:focus-visible, summary:focus-visible { outline: 2px solid #8b6f36; outline-offset: 3px; }
+.app { padding: 12px; }
+.brand { display: flex; align-items: center; justify-content: space-between; padding: 0 10px; margin-bottom: 8px; }
+.brand h1 { display: flex; align-items: baseline; gap: 9px; margin: 0; font-size: 15px; letter-spacing: .8px; }
+.brand h1 span { color: #68745a; font-size: 9px; letter-spacing: 1.4px; }
+.icon-button { display: grid; place-items: center; width: 30px; height: 30px; padding: 6px;
+  border: 1px solid #dce0d4; border-radius: 8px; background: #fbfaf6; color: #68745a; }
+.icon-button:hover { background: #eef0e6; }
+.icon-button svg { width: 16px; height: 16px; }
+.popup-wheel-stage { width: 360px; height: 360px; }
+/* A transformed ancestor contains the shared wheel's fixed-positioned layers. */
+.popup-wheel-frame { width: 400px; height: 400px; transform: scale(.9); transform-origin: top left; }
+.popup-wheel-frame .sector[role="menuitem"] { cursor: pointer; }
+.popup-wheel-frame .sector[aria-disabled="true"] { cursor: default; }
+.empty-message { display: grid; place-content: center; height: 100%; margin: 0; padding: 24px; color: #777b70; text-align: center; }
+.status { margin: 8px 8px 0; padding: 8px 12px; border: 1px solid #dce0d4; border-radius: 8px; background: #edf0e5; overflow-wrap: anywhere; }
+.status[data-kind="error"] { border-color: #e2c5b0; background: #f4e9df; color: #895636; }
+.pending-selections { margin: 8px; color: #68745a; }
+.pending-selections summary { cursor: pointer; }
+.pending-selection { padding: 10px 0; }
+.pending-selection p { margin: 0 0 6px; }
+.pending-selection button { margin-right: 6px; border: 1px solid #dce0d4; border-radius: 6px; padding: 4px 8px; background: #fbfaf6; }
+.task-preview { max-height: 3em; overflow: hidden; color: #777b70; }
+
+.setup-hint { margin: 8px; padding: 12px; border: 1px solid #dce0d4; border-radius: 8px; background: #eef0e6; }
+.setup-hint strong { font-size: 12px; }
+.setup-hint p { margin: 5px 0 9px; color: #68745a; font-size: 11px; }
+.setup-hint button { border: 1px solid #cfd6c4; border-radius: 5px; padding: 4px 8px; background: #fbfaf6; }

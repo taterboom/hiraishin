@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Fixture Chat</title></head><body>
+<h1>Fixture Chat</h1>
+<div id="log"></div>
+<textarea id="prompt" rows="4"></textarea>
+<button id="send" type="button">Send</button>
+<script>
+  const params = new URL(location.href).searchParams;
+  const prompt = document.getElementById('prompt');
+  if (params.get('draft')) prompt.value = params.get('draft');
+  document.getElementById('send').addEventListener('click', () => {
+    if (!prompt.value.trim()) return;
+    const msg = document.createElement('pre'); msg.className = 'msg'; msg.textContent = prompt.value;
+    document.getElementById('log').append(msg);
+    prompt.value = '';
+  });
+</script>
+</body></html>

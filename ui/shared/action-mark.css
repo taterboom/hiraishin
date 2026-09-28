@@ -1,0 +1,10 @@
+/* The action icon and per-target monogram are shared by the panel and the settings page, so the
+   two never drift apart. Sizes here suit the settings table; the panel scales them up. */
+.action-icon { width: 16px; height: 16px; flex: 0 0 auto; color: #566645; }
+.action-mark { position: relative; display: block; width: 16px; height: 16px; flex: 0 0 auto; }
+/* Plain letters, no fill: they read as part of the same line-icon set, and per-target colours
+   or a filled badge only added noise. */
+.action-monogram { display: grid; place-items: center; width: 16px; height: 16px;
+  color: #566645; font-size: 10px; font-weight: 700; letter-spacing: -.2px; }
+/* The mode glyph sits in the free corner above the letters, so it never covers one. */
+.action-badge { position: absolute; right: -4px; top: -4px; width: 10px; height: 10px; color: #566645; }

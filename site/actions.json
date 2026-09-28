@@ -1,0 +1,335 @@
+{
+  "name": "Hiraishin",
+  "version": "0.2.0",
+  "description": "按住 Option / Alt 甩动轮盘，快速切换、整理和复制标签页，把选中文字发送到 ChatGPT / Claude。",
+  "homepage": "https://taterboom.github.io/hiraishin/",
+  "minimumChrome": "121",
+  "actions": [
+    {
+      "id": "history-back",
+      "name": "访问历史后退",
+      "category": "穿梭",
+      "keywords": [
+        "back",
+        "后退",
+        "返回",
+        "历史"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": "Ctrl+Comma"
+    },
+    {
+      "id": "history-forward",
+      "name": "访问历史前进",
+      "category": "穿梭",
+      "keywords": [
+        "forward",
+        "前进",
+        "历史"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": "Ctrl+Period"
+    },
+    {
+      "id": "switch-previous-tab",
+      "name": "切回上一 Tab",
+      "category": "穿梭",
+      "keywords": [
+        "previous",
+        "last",
+        "toggle",
+        "上一个",
+        "切换",
+        "mru"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "close-right",
+      "name": "关闭右侧标签页",
+      "category": "整理",
+      "keywords": [
+        "close",
+        "right",
+        "关闭",
+        "右边",
+        "收起"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "move-tab-left",
+      "name": "当前 Tab 左移",
+      "category": "整理",
+      "keywords": [
+        "move",
+        "left",
+        "移动",
+        "左"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "move-tab-right",
+      "name": "当前 Tab 右移",
+      "category": "整理",
+      "keywords": [
+        "move",
+        "right",
+        "移动",
+        "右"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "move-tab-first",
+      "name": "当前 Tab 移到最左",
+      "category": "整理",
+      "keywords": [
+        "move",
+        "first",
+        "start",
+        "移动",
+        "开头",
+        "最左"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "move-tab-last",
+      "name": "当前 Tab 移到最右",
+      "category": "整理",
+      "keywords": [
+        "move",
+        "last",
+        "end",
+        "移动",
+        "末尾",
+        "最右"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "move-to-new-window",
+      "name": "当前 Tab 移到新窗口",
+      "category": "整理",
+      "keywords": [
+        "window",
+        "new",
+        "窗口",
+        "新窗口",
+        "拆分"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "move-with-left-to-new-window",
+      "name": "当前及左侧 Tabs 移到新窗口",
+      "category": "整理",
+      "keywords": [
+        "window",
+        "left",
+        "窗口",
+        "左侧"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "move-with-right-to-new-window",
+      "name": "当前及右侧 Tabs 移到新窗口",
+      "category": "整理",
+      "keywords": [
+        "window",
+        "right",
+        "窗口",
+        "右侧"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "duplicate-tab",
+      "name": "复制标签页",
+      "category": "复制",
+      "keywords": [
+        "duplicate",
+        "clone",
+        "复制",
+        "副本"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "copy-links",
+      "name": "复制链接",
+      "category": "带走",
+      "keywords": [
+        "copy",
+        "url",
+        "link",
+        "链接",
+        "网址"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "copy-links-markdown",
+      "name": "复制为 Markdown 链接",
+      "category": "带走",
+      "keywords": [
+        "copy",
+        "markdown",
+        "md",
+        "链接"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "go-to-chatgpt",
+      "name": "前往 ChatGPT",
+      "category": "AI 目标",
+      "keywords": [
+        "go",
+        "open",
+        "switch",
+        "打开",
+        "切换",
+        "前往",
+        "chatgpt",
+        "ai"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "send-chatgpt",
+      "name": "发送到 ChatGPT",
+      "category": "AI 目标",
+      "keywords": [
+        "send",
+        "ask",
+        "发送",
+        "提问",
+        "chatgpt",
+        "ai"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": true,
+      "defaultShortcut": null
+    },
+    {
+      "id": "go-to-claude",
+      "name": "前往 Claude",
+      "category": "AI 目标",
+      "keywords": [
+        "go",
+        "open",
+        "switch",
+        "打开",
+        "切换",
+        "前往",
+        "claude",
+        "ai"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "send-claude",
+      "name": "发送到 Claude",
+      "category": "AI 目标",
+      "keywords": [
+        "send",
+        "ask",
+        "发送",
+        "提问",
+        "claude",
+        "ai"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": true,
+      "defaultShortcut": null
+    },
+    {
+      "id": "go-to-default-target",
+      "name": "前往 默认目标",
+      "category": "AI 目标",
+      "keywords": [
+        "go",
+        "open",
+        "switch",
+        "打开",
+        "切换",
+        "前往",
+        "default",
+        "默认"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "send-default-target",
+      "name": "发送到 默认目标",
+      "category": "AI 目标",
+      "keywords": [
+        "send",
+        "ask",
+        "发送",
+        "提问",
+        "default",
+        "默认"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": true,
+      "defaultShortcut": null
+    }
+  ]
+}

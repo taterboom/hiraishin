@@ -1,0 +1,20 @@
+# Hiraishin (飛雷神)
+
+> A Chrome extension for quickly operating browser tabs with a customizable radial wheel. Hold Option on macOS or Alt on Windows/Linux, move the pointer, then release to execute. A toolbar popup exposes the same wheel as clickable sectors.
+
+## Available features
+
+- A shared 4/6/8/12-sector wheel, with configurable actions or empty sectors. Page gestures require optional HTTP/HTTPS access. Toolbar clicks remain available when page gestures are disabled.
+- Per-window tab-switch history (up to 200 entries during the browser session), back/forward through that trail, and switching to the previous tab. This is not navigation history within a webpage.
+- Close unpinned tabs to the right; the wheel requires confirmation. Move tabs left/right/first/last or to another window. Duplicate tabs and copy tab links as text or Markdown.
+- Go to or send selected text to ChatGPT / Claude. The target is the leftmost matching tab in the current window, or a new tab beside the source. Existing drafts stop automatic sending. Custom compatible websites can support navigation, fill or send; there is no product-imposed custom-target count limit or paid tier.
+- 20 native Chrome commands, plus page shortcuts for combinations Chrome does not support natively. Exact action metadata is in actions.json; there is no recent-tabs list, floating selection button, or index-entry UI.
+
+## Limits
+
+- Chrome 121+, excluding Incognito. Page gestures do not operate on browser-internal or otherwise restricted pages, or while editing an input field.
+- No developer-operated data server, analytics or cloud sync. Selected text is transferred to a third-party website only when the user explicitly invokes fill/send. Failed selections may remain in session storage for up to 30 minutes for recovery.
+- AI page adapters depend on website structure and login state. Local fixture tests do not establish compatibility with a live account. Do not promise guaranteed sending on arbitrary websites.
+- Release candidate: public store/download/support URLs must be verified before describing this release as publicly available. No open-source license is asserted here.
+
+Privacy details: privacy.html
