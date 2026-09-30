@@ -36,6 +36,7 @@ export interface PanelState {
   rightCount: number; tabCount: number; activeIndex: number; actions: ActionInfo[];
   tasks: TaskInfo[]; targets: TargetInfo[]; settings: Settings; platform: string;
   shortcuts: { granted: boolean; pageReady: boolean | null; webActive: boolean };
+  license: LicenseView;
 }
 export interface SettingsView {
   settings: Settings; actions: ActionInfo[]; status: ShortcutStatus; targets: TargetInfo[]; commandIds: string[];
@@ -46,3 +47,10 @@ export interface ActionResult {
 export interface UsageStatsData {
   version: number; startedAt: number | null; actions: Record<string, Record<string, number>>;
 }
+/** Local trial and cached purchase, as computed by src/license.js. */
+export interface LicenseView {
+  state: 'trial' | 'expired' | 'licensed' | 'revoked'; allowed: boolean;
+  trialStarted: boolean; trialEndsAt: number | null;
+  licenseKey: string | null; pendingPurchase: boolean; configured: boolean;
+}
+export interface CollectResult { status: 'none' | 'pending' | 'revoked' | 'activated'; licenseKey?: string; license: LicenseView }

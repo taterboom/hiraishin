@@ -13,13 +13,16 @@ import { createNotifier } from './notify.js';
 import { normalizeNative } from './keys.js';
 import { normalizeSettings } from './settings.js';
 import { createUsageStore } from './usage.js';
+import { createLicense } from './license.js';
 
 export const HISTORY_KEY = 'tabHistory';
 export { SETTINGS_KEY, PAGE_ORIGINS, COMMAND_IDS };
 const MENU_ROOT = 'hiraishin-root';
 const ACTIVATION_MARKER_TTL = 10000;
+export const LOCKED_MESSAGE = '试用已结束。购买或输入授权码后即可继续使用，设置和待处理内容都已保留。';
 
-export function createController(api) {
+/** @param {any} api @param {{ license?: import('./license.js').LicenseOptions }} [options] */
+export function createController(api, { license: licenseOptions } = {}) {
   let histories = null;
   let tail = Promise.resolve();
   const expectedActivations = new Map();
@@ -38,6 +41,14 @@ export function createController(api) {
   const usage = createUsageStore(api);
   // Counting is best-effort: a storage failure must never prevent the requested operation.
   const countAction = (id, origin) => usage.record(id, origin).catch(error => console.warn('[Hiraishin usage]', error));
+  const license = createLicense(api, licenseOptions);
+  // Every path that really performs an operation calls one of these two before doing anything.
+  // Previews count too, so a user never confirms a dialog only to be refused afterwards.
+  const denied = () => ({ status: 'license-required', message: LOCKED_MESSAGE, notify: true });
+  async function requireLicense() {
+    if (!(await license.allowed())) throw new Error(LOCKED_MESSAGE);
+  }
+  const noteResult = result => license.noteResult(result).catch(error => console.warn('[Hiraishin license]', error));
 
   // ---------------------------------------------------------------- history core
 
@@ -215,6 +226,10 @@ export function createController(api) {
     const settings = await settingsStore.get();
     const action = getAction(actionId, settings);
     if (!action) throw new Error('未知动作。');
+    if (!(await license.allowed())) {
+      if (rawCtx.origin !== 'popup') await notify(LOCKED_MESSAGE);
+      return denied();
+    }
     await countAction(action.id, rawCtx.origin);
     const ctx = await resolveContext(rawCtx);
     let result;
@@ -241,7 +256,11 @@ export function createController(api) {
           else result = { ...links, notify: true };
           break;
         }
-        case 'transfer': return runTransfer(action.mode, action.targetId, ctx);
+        case 'transfer': {
+          const transferred = await runTransfer(action.mode, action.targetId, ctx);
+          await noteResult(transferred);
+          return transferred;
+        }
         default: throw new Error('未知动作。');
       }
     } catch (error) {
@@ -250,6 +269,7 @@ export function createController(api) {
     }
     result.notify ??= false;
     if (ctx.origin !== 'popup' && result.notify && result.message) await notify(result.message);
+    await noteResult(result);
     return result;
   }
 
@@ -293,8 +313,8 @@ export function createController(api) {
   async function getState(windowId) {
     const { windowId: id, tabs, active, history } = await windowContext(windowId);
     const settings = await settingsStore.get();
-    const [{ actions, status }, targetList, tasks, pageReady] = await Promise.all([
-      describeActions(settings), describeTargets(settings), transfer.list(), shortcuts.pingTab(active.id),
+    const [{ actions, status }, targetList, tasks, pageReady, licenseView] = await Promise.all([
+      describeActions(settings), describeTargets(settings), transfer.list(), shortcuts.pingTab(active.id), license.status(),
     ]);
     const byId = new Map(tabs.map(tab => [tab.id, tab]));
     await persist();
@@ -311,6 +331,7 @@ export function createController(api) {
       actions, tasks, targets: targetList,
       settings, platform: status.platform,
       shortcuts: { granted: status.granted, pageReady, webActive: Object.keys(status.keymap.map).length > 0 },
+      license: licenseView,
     } };
   }
 
@@ -412,6 +433,7 @@ export function createController(api) {
       if (!action || action.panelInput || !settings.overlay.slots.includes(action.id)) throw new Error('未知动作。');
       if (message.type === 'overlay-confirm-action') {
         if (action.kind !== 'close-right') throw new Error('此动作不需要确认。');
+        await requireLicense();
         return enqueue(async () => {
           const approved = overlayClosures.get(tab.id);
           if (!approved || approved.token !== message.token || approved.frameId !== sender.frameId
@@ -420,10 +442,12 @@ export function createController(api) {
           overlayClosures.delete(tab.id);
           await countAction('close-right', 'overlay');
           const { closedCount } = await closeRight(ctx.windowId, approved);
+          if (closedCount) await noteResult(ok());
           return ok(`已关闭 ${closedCount} 个标签页。`);
         });
       }
       if (action.kind === 'close-right') {
+        await requireLicense();
         return enqueue(async () => {
           for (const [id, plan] of overlayClosures) if (Date.now() > plan.expiresAt) overlayClosures.delete(id);
           overlayClosures.delete(tab.id);
@@ -449,7 +473,7 @@ export function createController(api) {
     switch (message.type) {
       case 'get-state': return enqueue(() => getState(message.windowId));
       case 'run-action': return runAction(message.id, popupCtx({ args: message.args }));
-      case 'popup-close-preview': return enqueue(async () => {
+      case 'popup-close-preview': await requireLicense(); return enqueue(async () => {
         const { active, tabs, windowId } = await windowContext(message.windowId);
         for (const [id, plan] of popupClosures) if (Date.now() > plan.expiresAt) popupClosures.delete(id);
         popupClosures.delete(windowId);
@@ -459,7 +483,7 @@ export function createController(api) {
         popupClosures.set(windowId, { token, anchorId: active.id, windowId, tabIds, expiresAt: Date.now() + 120000 });
         return { confirmation: { token, count: tabIds.length } };
       });
-      case 'popup-close-confirm': return enqueue(async () => {
+      case 'popup-close-confirm': await requireLicense(); return enqueue(async () => {
         const approved = popupClosures.get(message.windowId);
         if (!approved || approved.token !== message.token || Date.now() > approved.expiresAt) {
           throw new Error('确认已失效，请重新打开轮盘。');
@@ -467,17 +491,22 @@ export function createController(api) {
         popupClosures.delete(message.windowId);
         await countAction('close-right', 'popup');
         const { closedCount } = await closeRight(message.windowId, approved);
+        if (closedCount) await noteResult(ok());
         return ok(`已关闭 ${closedCount} 个标签页。`);
       });
-      case 'navigate': return enqueue(async () => {
+      case 'navigate': await requireLicense(); return enqueue(async () => {
         if (message.direction === -1 || message.direction === 1) await countAction(message.direction === -1 ? 'history-back' : 'history-forward', 'popup');
-        return navigate(message.windowId, message.direction);
+        const outcome = await navigate(message.windowId, message.direction);
+        await noteResult(outcome);
+        return outcome;
       });
-      case 'close-right': return enqueue(async () => {
+      case 'close-right': await requireLicense(); return enqueue(async () => {
         await countAction('close-right', 'popup');
-        return closeRight(message.windowId);
+        const outcome = await closeRight(message.windowId);
+        if (outcome.closedCount) await noteResult(ok());
+        return outcome;
       });
-      case 'jump': return enqueue(async () => {
+      case 'jump': await requireLicense(); return enqueue(async () => {
         await countAction('jump-history', 'popup');
         const context = await windowContext(message.windowId);
         const cursor = message.cursor;
@@ -485,7 +514,9 @@ export function createController(api) {
           || context.history.entries[cursor] !== message.tabId) {
           throw new Error('这条记录已变化，请重新打开面板。');
         }
-        return activate(context, { tabId: context.history.entries[cursor], cursor });
+        const outcome = await activate(context, { tabId: context.history.entries[cursor], cursor });
+        await noteResult(outcome);
+        return outcome;
       });
       case 'get-settings': return getSettingsView();
       case 'save-settings': {
@@ -506,11 +537,22 @@ export function createController(api) {
       case 'reset-usage': return { usage: await usage.reset() };
       case 'list-tasks': return { tasks: await transfer.list() };
       case 'retry-task': {
+        await requireLicense();
         await countAction('retry-transfer', 'retry');
         const ctx = await resolveContext(popupCtx({}));
         const result = await transfer.retry(message.taskId, ctx);
+        await noteResult(result);
         return result;
       }
+      case 'get-license': return { license: await license.status() };
+      case 'start-purchase': {
+        const url = await license.startPurchase();
+        await api.tabs.create({ url });
+        return { license: await license.status() };
+      }
+      case 'collect-license': return { ...(await license.collect()), license: await license.status() };
+      case 'activate-license': return { license: await license.activate(message.licenseKey) };
+      case 'refresh-license': return { license: await license.refresh() };
       case 'remove-task': await transfer.remove(message.taskId); return {};
       default: throw new Error('未知操作。');
     }
@@ -521,17 +563,21 @@ export function createController(api) {
     ready: () => enqueue(async () => {
       const view = await afterSettingsChange();
       await transfer.purgeExpired();
+      await license.ready().catch(error => console.warn('[Hiraishin license]', error));
       return view;
     }),
     onCommand: (command, tab) => runAction(command, { origin: 'command', tabId: tab?.id, windowId: tab?.windowId }),
     onMenuClicked: async (info, tab) => {
       const [mode, targetId] = String(info.menuItemId).split(':');
       if (!['fill', 'send'].includes(mode) || !targetId || !tab) return Promise.resolve(null);
+      if (!(await license.allowed())) { await notify(LOCKED_MESSAGE); return denied(); }
       const target = resolveTargets(await settingsStore.get()).find(item => item.id === targetId);
       if (target) await countAction(`${target.builtin ? '' : 'target:'}${mode}-${targetId}`, 'menu');
-      return runTransfer(mode, targetId, { origin: 'menu', tabId: tab.id, windowId: tab.windowId, frameId: info.frameId, fallbackText: info.selectionText });
+      const result = await runTransfer(mode, targetId, { origin: 'menu', tabId: tab.id, windowId: tab.windowId, frameId: info.frameId, fallbackText: info.selectionText });
+      await noteResult(result);
+      return result;
     },
-    onAlarm: alarm => transfer.onAlarm(alarm),
+    onAlarm: alarm => Promise.all([transfer.onAlarm(alarm), license.onAlarm(alarm)]),
     onAttached: (tabId, { newWindowId }) => enqueue(async () => {
       const tab = await api.tabs.get(tabId);
       if (tab.active) histories[newWindowId] = recordVisit(histories[newWindowId] ?? createHistory(), tabId);

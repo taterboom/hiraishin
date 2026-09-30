@@ -13,4 +13,4 @@ Allow: /
 User-agent: Google-Extended
 Allow: /
 
-Sitemap: https://taterboom.github.io/hiraishin/sitemap.xml
+Sitemap: https://hiraishin.44san.com/sitemap.xml

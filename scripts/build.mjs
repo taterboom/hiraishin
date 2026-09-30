@@ -35,7 +35,7 @@ export async function writeActionsJson() {
   await mkdir(path.join(root, 'site'), { recursive: true });
   await writeFile(path.join(root, 'site', 'actions.json'), JSON.stringify({
     name: 'Hiraishin', version: manifest.version, description: manifest.description,
-    homepage: 'https://taterboom.github.io/hiraishin/', minimumChrome: manifest.minimum_chrome_version, actions,
+    homepage: 'https://hiraishin.44san.com/', minimumChrome: manifest.minimum_chrome_version, actions,
   }, null, 2) + '\n');
 }
 

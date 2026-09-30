@@ -13,7 +13,7 @@ export function createFakeChrome({
   granted = false, platform = 'win', nativeCommands = [], groups = {}, pingReply = null,
 } = {}) {
   const data = {
-    tabs: clone(tabs), session: clone(session), local: clone(local), platform, nativeCommands: clone(nativeCommands),
+    tabs: clone(tabs), session: clone(session), local: clone(local), sync: {}, platform, nativeCommands: clone(nativeCommands),
     grantedOrigins: new Set(granted ? ['http://*/*', 'https://*/*'] : []),
     groups: new Map(Object.entries(groups).map(([id, info]) => [Number(id), info])), nextGroupId: 100,
     nextTabId: Math.max(0, ...tabs.map(item => item.id)) + 1, nextWindowId: Math.max(0, ...tabs.map(item => item.windowId)) + 1,
@@ -80,7 +80,7 @@ export function createFakeChrome({
       sendMessage: async message => { data.messages.push(clone(message)); return clone(data.runtimeReply); },
       openOptionsPage: async () => {},
     },
-    storage: { session: storageArea('session'), local: storageArea('local'), onChanged: { addListener() {} } },
+    storage: { session: storageArea('session'), local: storageArea('local'), sync: storageArea('sync'), onChanged: { addListener() {} } },
     tabs: {
       query: async (query = {}) => clone(data.tabs.filter(item =>
         (query.windowId === undefined || item.windowId === query.windowId)

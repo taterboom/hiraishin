@@ -11,7 +11,9 @@
     "check": "node scripts/check.mjs",
     "package": "node scripts/package.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "shot": "node scripts/screenshot.mjs"
+    "shot": "node scripts/screenshot.mjs",
+    "site:deploy": "npx wrangler@4 deploy -c site/wrangler.jsonc",
+    "try": "node scripts/try.mjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.280",

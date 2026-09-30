@@ -2,7 +2,7 @@
   "name": "Hiraishin",
   "version": "0.2.0",
   "description": "按住 Option / Alt 甩动轮盘，快速切换、整理和复制标签页，把选中文字发送到 ChatGPT / Claude。",
-  "homepage": "https://taterboom.github.io/hiraishin/",
+  "homepage": "https://hiraishin.44san.com/",
   "minimumChrome": "121",
   "actions": [
     {

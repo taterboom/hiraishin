@@ -1,0 +1,9 @@
+{
+  // Static product site for hiraishin.44san.com: landing page, privacy policy, and the page
+  // Stripe redirects to after payment. Deploy: npm run site:deploy
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "hiraishin-site",
+  "compatibility_date": "2026-09-28",
+  "assets": { "directory": ".", "html_handling": "auto-trailing-slash", "not_found_handling": "404-page" },
+  "routes": [{ "pattern": "hiraishin.44san.com", "custom_domain": true }]
+}

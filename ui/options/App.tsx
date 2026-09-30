@@ -11,6 +11,7 @@ import { WheelActionPicker } from './WheelActionPicker';
 import { WheelPositions, wheelDirection } from './WheelPositions';
 import { createSettingsClient } from './settings-client';
 import { UsageStats } from './UsageStats';
+import { LicenseSection } from './LicenseSection';
 
 type Status = { message: string; kind: 'info' | 'error' } | null;
 const CAPABILITY_LABEL: Record<Capability, string> = { navigate: '仅前往', fill: '前往 + 填入', send: '前往 + 填入 + 发送' };
@@ -68,6 +69,7 @@ export function App() {
   return (
     <main className="page">
       <Header />
+      <LicenseSection show={show} />
 
       <ActionsSection view={view} label={label} onRecord={action => setRecording({ action, combo: null, note: '' })}
         onClear={id => setBinding(id, null)} onGrant={async () => { const ok = await requestPagePermission(); show(ok ? '已允许访问网页。已有页面无需刷新。' : '未获得权限。', ok ? 'info' : 'error'); }}

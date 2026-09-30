@@ -210,3 +210,14 @@ dialog h4 { margin: 22px 0 2px; padding-top: 16px; border-top: 1px solid var(--l
 .usage-table th, .usage-table td { padding: 8px 0; text-align: left; border-bottom: 1px solid var(--line); }
 .usage-table th:last-child, .usage-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
 .usage-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 12px; font-size: 12px; }
+.license { margin-top: 18px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: #fbfaf6; }
+.license[data-state="expired"], .license[data-state="revoked"] { border-color: #e2c5b0; background: #f7eee6; }
+.license h2 { margin: 0; }
+.license-summary { margin: 4px 0 10px; font-size: 12px; }
+.license-key { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.license-key strong { flex-basis: 100%; font-size: 12px; }
+.license-key code { padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font-size: 13px; letter-spacing: .5px; }
+.license-pending { display: flex; align-items: center; gap: 10px; color: var(--moss); font-size: 12px; }
+.license-actions { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 12px; }
+.license-activate { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 8px; }
+.license-activate .field { flex: 0 1 520px; margin: 0; }

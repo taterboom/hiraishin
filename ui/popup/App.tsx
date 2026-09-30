@@ -5,9 +5,19 @@ import { unavailableReason } from '../shared/availability';
 import { Wheel, WHEEL_SIZE } from '../overlay/Wheel';
 import { Confirmation, type CloseConfirmation } from '../overlay/Confirmation';
 import { SettingsGlyph } from './icons';
-import type { ActionInfo, ActionResult, PanelState } from '../shared/types';
+import type { ActionInfo, ActionResult, LicenseView, PanelState } from '../shared/types';
 
 const SWITCHING_KINDS = new Set(['history', 'previous-tab', 'transfer', 'new-window']);
+const NOTICE_DAYS = 3;
+
+/** Only when it matters: the last few trial days, or no longer allowed. Never mid-gesture. */
+function licenseNotice(license: LicenseView): string {
+  if (license.state === 'expired') return '试用已结束';
+  if (license.state === 'revoked') return '授权已撤销';
+  if (license.state !== 'trial' || !license.trialEndsAt) return '';
+  const days = Math.ceil((license.trialEndsAt - Date.now()) / 86_400_000);
+  return days <= NOTICE_DAYS ? `试用还剩 ${Math.max(days, 1)} 天` : '';
+}
 type Status = { message: string; kind: 'info' | 'error' } | null;
 
 export function App() {
@@ -125,6 +135,11 @@ export function App() {
     </div>
     {confirmation && <Confirmation state={confirmation} onCancel={cancelConfirmation} onConfirm={() => { void confirmClose(); }} />}
     {status && <p className="status" role="status" aria-live="polite" data-kind={status.kind}>{status.message}</p>}
+    {state && licenseNotice(state.license) && <aside className="setup-hint" aria-label="授权">
+      <strong>{licenseNotice(state.license)}</strong>
+      <p>购买或输入授权码后即可继续使用，设置和待处理内容都已保留。</p>
+      <button type="button" onClick={() => { chrome.runtime.openOptionsPage(); window.close(); }}>购买 / 激活</button>
+    </aside>}
     {state && state.settings.overlay.enabled && !state.shortcuts.granted && <aside className="setup-hint" aria-label="启用网页轮盘">
       <strong>在网页里也能用轮盘</strong>
       <p>按住 {holdKeyLabel(state.settings.overlay.holdCode, state.platform)} 并甩动鼠标，松开执行。首次使用需允许网页访问。</p>

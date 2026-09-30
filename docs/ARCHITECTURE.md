@@ -83,6 +83,7 @@ docs/                      产品方案、本文、商店文案
 | 消息边界 | `handleMessage(message, sender)`：`sender.url` 以 `chrome-extension://<id>/` 开头视为扩展页面（设置页运行在标签页里，不能用“有 tab”判断）；内容脚本只允许 `web-shortcut` 与 `overlay-state` / `overlay-action` / `overlay-confirm-action`；要求来源 Tab 处于激活状态，快捷键需匹配已保存绑定与有效 keymap，轮盘动作需属于当前分区配置。 |
 | 设置变更 | `afterSettingsChange()` 串行执行：同步网页配置与脚本注册 → 重建右键菜单 → 向新注册脚本的已开页面即时注入 → 返回设置视图。设置页与权限事件可能同时触发，串行化避免重复注册。 |
 | 剪贴板 | `copyText()` 经离屏文档执行 `execCommand('copy')`，需要 `clipboardWrite` 权限；调用互斥。 |
+| 授权检查 | 所有真正执行操作的路径在入口检查使用资格：`runAction`（快捷键、面板、网页快捷键、网页轮盘）、右键菜单、两种轮盘批量关闭的预览与确认、`navigate` / `jump` / `close-right` 消息、任务重试。预览也检查，避免确认后才被拒。被拒不计入使用统计；`runAction` 与右键菜单返回 `license-required` 并对非面板来源发通知，其余路径抛出同一条提示。成功结果（`ok`、`navigated`、`filled`、`sent`，或 `changed: true`）交给 `license.noteResult()` 用来开始试用。设置、统计、待处理选区的查看与清除、授权消息不受限。见 [LICENSE_INTEGRATION.md](LICENSE_INTEGRATION.md)。 |
 
 ### 3.3 领域模块
 
@@ -98,6 +99,7 @@ docs/                      产品方案、本文、商店文案
 | `transfer.js` | 一次传送任务的编排（见 §5），任务持久化与 30 分钟清理 | 依赖 scripting / storage / alarms |
 | `shortcuts.js` | 有效 keymap（原生承接的组合被屏蔽，重复组合标记冲突）、`pageConfig` 发布、动态内容脚本注册、即时注入、原生绑定回读 | 依赖 scripting / commands |
 | `notify.js` | 通知封装，只用于失败、无对象、不确定、待处理状态 | 依赖 notifications |
+| `license.js` | 本地试用（首次成功动作起 14 天）、Menkyo 授权缓存与 ES256 本地验签、购买 / 领取 / 激活 / 刷新；每天一次刷新（±25% 错峰），失败退避 1h 起倍增、封顶 24h；网络与 5xx 错误不改变已购买状态，token 过期后另有 14 天离线宽限，只有服务端明确撤销才失效。服务地址与公钥在 `license-config.js`，未填写时 `npm run package` 拒绝打包 | 依赖 storage / alarms / fetch |
 
 ## 4. 消息协议
 
@@ -121,6 +123,11 @@ docs/                      产品方案、本文、商店文案
 | `overlay-confirm-action` | 内容脚本 | `id: 'close-right'`, `token` | 消费一次性确认，再关闭预览中的标签；验证来源标签、frame、窗口、有效期和标签集合 |
 | `offscreen-copy` | worker → 离屏 | `text` | `{ ok }` |
 | `hiraishin-ping` | worker → 内容脚本 | — | `{ ready, active }`（仅顶层 frame 回应） |
+| `get-license` | 设置页 / 面板 | — | `{ license: LicenseView }`；`get-state` 也包含 `license` |
+| `start-purchase` | 设置页 | — | 向 Menkyo 取领取凭据与购买链接，保存凭据并打开链接 |
+| `collect-license` | 设置页 | — | 一次领取尝试：`none` / `pending` / `revoked` / `activated`；重试由设置页有界控制 |
+| `activate-license` | 设置页 | `licenseKey` | 换取并验证授权凭据 |
+| `refresh-license` | 设置页 | — | 立即刷新一次 |
 
 类型定义在 `ui/shared/types.ts`，后台返回结构改变时同步修改。
 
@@ -172,6 +179,8 @@ sequenceDiagram
 | `storage.local` | `settings` | 用户配置（版本 2，见 `settings.js` 的 `Settings` 类型） | 长期，仅本机 |
 | `storage.local` | `usageStats` | `{ version: 1, startedAt, actions: { [actionId]: { [source]: count } } }` | 长期，仅本机；设置页可清空 |
 | `storage.local` | `pageConfig` | 派生：有效 keymap（含重复策略）、停用站点、轮盘配置；保留 `floating: null` 让旧版已注入按钮隐藏。内容脚本只读这一个键 | 随设置与权限变化重写 |
+| `storage.local` | `license` | `{ version: 1, trialStartedAt, credential, licenseKey, token, nextRefreshAt, failures, revoked }`，只由 `license.js` 写入 | 长期，仅本机 |
+| `storage.sync` | `hiraishinLicense` | `{ credential, licenseKey }` 镜像，重装或换电脑时恢复 | 随 Chrome 账号同步 |
 | `storage.session` | `tabHistory` | `{ version: 1, windows: { [windowId]: { entries, cursor } } }`，只含 Tab ID | 浏览器会话 |
 | `storage.session` | `transferTasks` | 传送任务：模式、目标、文本、来源、状态、时间 | 成功即删；失败保留 30 分钟 |
 
@@ -216,6 +225,8 @@ sequenceDiagram
 | `npm run shot` | 用 Chrome for Testing 渲染扩展页面并按 3 倍截取单个元素，默认选择器需随当前轮盘结构指定；可传页面、选择器与输出路径。`SHOT_ACTIVE=<选择器>` 通过 CDP 强制真实的 `:active` 状态，`SHOT_PRE=<JS>` 可先布置页面状态 |
 | `npm run smoke` | 用 Chrome for Testing 验证核心交互：历史与标签操作、剪贴板、fixture 目标传送与草稿保护、快捷键与轮盘、危险操作确认、设置保存与本地统计 |
 | `npm run package` | check 后打 `dist/hiraishin-<version>.zip` |
+| `npm run try [-- local] [-- --fresh]` | 构建后只把 `dist/` 里的授权配置指向 Menkyo 测试环境（默认）或本地 Menkyo，并用 Chrome for Testing 打开设置页供手动测试购买与激活；浏览器配置保存在 `.artifacts/try-profile-<env>`，`--fresh` 清空。源码 `src/license-config.js` 保持正式值 |
+| `npm run site:deploy` | 把 `site/` 发布到 `hiraishin.44san.com`（Cloudflare 静态资源） |
 
 `dist/hiraishin` 是唯一的加载与发布目录；仓库根目录不能直接作为扩展加载。
 
@@ -227,5 +238,5 @@ sequenceDiagram
 
 - **新增动作**：在 `actions.js` 定义 → `controller.runAction` 增加 `kind` 分支 → 在 `ui/popup/icons.tsx` 为新的 `kind` 添加图标 → 如需原生命令，`manifest.json` 加同名命令（check 会校验顺序一致）→ 附录 A 与 `site/actions.json` 自动同步。
 - **新增内置目标**：`targets.js` 的 `BUILTIN_TARGETS` 加 URL 规则与 `site`，`page-adapter.js` 加选择器档案，`actions.js` 自动生成三种动作。
-- **收费方案**：目前没有付费分层或功能权益模块；后续方案需另行讨论。旧配置中的 `plan` 字段在规范化时丢弃，已有目标与绑定保留。
+- **收费方案**：完整试用后一次性购买，授权由 Menkyo 发放，见 [LICENSE_INTEGRATION.md](LICENSE_INTEGRATION.md)。不做功能分层；旧配置中的 `plan` 字段在规范化时丢弃。**新增会执行操作的入口时，必须在入口调用授权检查**，并在 `tests/license.test.js` 的全入口测试里加上这一条。
 - **新增页面消息**：在 `controller.handleMessage` 加分支，同时更新 `ui/shared/types.ts`、`ui/shared/api.ts` 与本文第 4 节。
