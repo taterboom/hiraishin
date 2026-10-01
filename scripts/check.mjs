@@ -23,6 +23,43 @@ assert.ok(Object.values(manifest.commands).filter(command => command.suggested_k
 assert.equal(Number(manifest.minimum_chrome_version), 121, 'Tab.lastAccessed needs Chrome 121');
 const { COMMAND_IDS } = await import('../src/actions.js');
 assert.deepEqual(Object.keys(manifest.commands), COMMAND_IDS, 'manifest commands must match the action registry');
+
+// Translations: every language has exactly the same keys, and each message uses the same
+// {placeholders} as its Chinese original. A key present in two areas would shadow silently.
+const { AREAS, DICTIONARIES } = await import('../src/locales/index.js');
+const placeholders = text => [...text.matchAll(/\{(\w+)\}/g)].map(match => match[1]).sort().join(',');
+const reference = DICTIONARIES.zh;
+for (const [locale, dictionary] of Object.entries(DICTIONARIES)) {
+  // `.one` singular variants are optional per language (see i18n.js); their base key is not.
+  const isOne = key => key.endsWith('.one');
+  const missing = Object.keys(reference).filter(key => !isOne(key) && !(key in dictionary));
+  const extra = Object.keys(dictionary).filter(key => !(key in reference) && !(isOne(key) && key.slice(0, -4) in reference));
+  assert.deepEqual(missing, [], `${locale} is missing translations`);
+  assert.deepEqual(extra, [], `${locale} has keys the Chinese dictionary does not`);
+  for (const [key, text] of Object.entries(dictionary)) {
+    assert.equal(typeof text, 'string', `${locale} ${key} must be a string`);
+    assert.ok(text.trim(), `${locale} ${key} is empty`);
+    const base = key in reference ? reference[key] : reference[key.slice(0, -4)];
+    assert.equal(placeholders(text), placeholders(base), `${locale} ${key} placeholders differ from zh`);
+  }
+  const seen = new Map();
+  for (const [area, entries] of Object.entries(AREAS[locale])) {
+    for (const key of Object.keys(entries)) {
+      assert.ok(!seen.has(key), `${locale} ${key} is defined in both ${seen.get(key)} and ${area}`);
+      seen.set(key, area);
+    }
+  }
+}
+// Every __MSG_x__ the manifest uses must exist in each generated _locales folder.
+const { CHROME_LOCALES } = await import('./build.mjs');
+const manifestText = JSON.stringify(manifest);
+const usedMessages = [...manifestText.matchAll(/__MSG_(\w+)__/g)].map(match => match[1]);
+assert.equal(manifest.default_locale, 'en');
+for (const folder of Object.values(CHROME_LOCALES)) {
+  const messages = JSON.parse(await readFile(`${dist}_locales/${folder}/messages.json`, 'utf8'));
+  for (const name of usedMessages) assert.ok(messages[name]?.message, `_locales/${folder} lacks ${name}`);
+}
+for (const id of COMMAND_IDS) assert.equal(manifest.commands[id].description, `__MSG_cmd_${id.replace(/-/g, '_')}__`, `${id} description must come from _locales`);
 for (const page of ['popup.html', 'options.html', 'offscreen.html']) {
   const html = await readFile(`${dist}${page}`, 'utf8');
   assert.ok(!/<script(?![^>]*\bsrc=)[^>]*>/i.test(html), `MV3 ${page} must not contain inline scripts`);

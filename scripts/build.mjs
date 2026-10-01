@@ -17,24 +17,51 @@ export async function copyStatic() {
   for (const file of ['manifest.json', 'popup.html', 'options.html', 'offscreen.html', 'icons']) {
     await cp(path.join(root, file), path.join(OUT_DIR, file), { recursive: true });
   }
-  await cp(path.join(root, 'site/privacy.html'), path.join(OUT_DIR, 'privacy.html'));
+  // The privacy notice ships inside the package too, one page per language at the same paths as
+  // the website (English at the root), so the settings page can link the reader's language.
+  for (const page of ['privacy.html', 'zh/privacy.html', 'ja/privacy.html']) {
+    await mkdir(path.dirname(path.join(OUT_DIR, page)), { recursive: true });
+    await cp(path.join(root, 'site', page), path.join(OUT_DIR, page)).catch(error => {
+      if (error.code !== 'ENOENT' || page === 'privacy.html') throw error;
+    });
+  }
   for (const file of await readdir(path.join(root, 'src'))) {
     if (file.endsWith('.js')) await cp(path.join(root, 'src', file), path.join(OUT_DIR, 'src', file));
+  }
+  await cp(path.join(root, 'src', 'locales'), path.join(OUT_DIR, 'src', 'locales'), { recursive: true });
+  await writeChromeLocales();
+}
+
+/** Chrome folder names for each dictionary; `en` is the manifest's default_locale. */
+export const CHROME_LOCALES = { zh: 'zh_CN', ja: 'ja', en: 'en' };
+
+/** Chrome reads the manifest's `__MSG_*__` strings from _locales, so they are generated from the
+ *  same dictionaries as everything else: `manifest.foo.bar` becomes the message `foo_bar`. */
+export async function writeChromeLocales() {
+  const { DICTIONARIES } = await import('../src/locales/index.js');
+  for (const [locale, folder] of Object.entries(CHROME_LOCALES)) {
+    const messages = Object.fromEntries(Object.entries(DICTIONARIES[locale])
+      .filter(([key]) => key.startsWith('manifest.'))
+      .map(([key, message]) => [key.slice('manifest.'.length).replace(/[^A-Za-z0-9]/g, '_'), { message }]));
+    await mkdir(path.join(OUT_DIR, '_locales', folder), { recursive: true });
+    await writeFile(path.join(OUT_DIR, '_locales', folder, 'messages.json'), JSON.stringify(messages, null, 2) + '\n');
   }
 }
 
 /** Machine-readable capability list for the landing page and agents (spec §14.2). */
 export async function writeActionsJson() {
-  const { listActions, CATEGORIES } = await import('../src/actions.js');
+  const { setLocale, t } = await import('../src/i18n.js');
+  setLocale('en');
+  const { listActions, categoryName } = await import('../src/actions.js');
   const manifest = JSON.parse(await (await import('node:fs/promises')).readFile(path.join(root, 'manifest.json'), 'utf8'));
   const actions = listActions().filter(action => !action.panelInput).map(action => ({
-    id: action.id, name: action.name, category: CATEGORIES[action.category], keywords: action.keywords,
+    id: action.id, name: action.name, category: categoryName(action.category), keywords: action.keywords,
     nativeCommand: action.command, webShortcut: action.web, requiresSelection: action.requiresSelection,
     defaultShortcut: manifest.commands[action.id]?.suggested_key?.default ?? null,
   }));
   await mkdir(path.join(root, 'site'), { recursive: true });
   await writeFile(path.join(root, 'site', 'actions.json'), JSON.stringify({
-    name: 'Hiraishin', version: manifest.version, description: manifest.description,
+    name: 'Hiraishin', version: manifest.version, description: t('manifest.description'),
     homepage: 'https://hiraishin.44san.com/', minimumChrome: manifest.minimum_chrome_version, actions,
   }, null, 2) + '\n');
 }

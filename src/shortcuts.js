@@ -2,6 +2,7 @@
 // for content scripts, and keep dynamic content scripts in step with settings and permissions.
 import { normalizeNative } from './keys.js';
 import { PAGE_ORIGINS } from './settings.js';
+import { browserLanguage, resolveLocale } from './i18n.js';
 
 export const PAGE_CONFIG_KEY = 'pageConfig';
 export const SHORTCUT_SCRIPT_ID = 'hiraishin-page-shortcuts';
@@ -97,6 +98,9 @@ export function createShortcutService(api, { settingsStore, listActionsFor }) {
       // Previously injected selection-button scripts hide themselves on this config change.
       floating: null,
       overlay: { ...settings.overlay, enabled: wantOverlay },
+      // Content scripts cannot read the preference's resolution themselves: `auto` means the browser
+      // language the extension sees, which is what the rest of the UI uses too.
+      locale: resolveLocale(settings.locale, browserLanguage(api)),
     } });
     const current = await registered();
     const legacy = LEGACY_SCRIPT_IDS.filter(id => current.has(id));

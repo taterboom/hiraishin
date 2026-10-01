@@ -1,9 +1,13 @@
+import { t } from './i18n.js';
+
 // Local aggregate counters only: no page URLs, selected text, event log or network calls.
 export const USAGE_KEY = 'usageStats';
-export const USAGE_SOURCES = {
-  overlay: '网页轮盘', popup: '工具栏轮盘', command: '浏览器快捷键',
-  web: '网页快捷键', menu: '右键菜单', retry: '重试填入', other: '其他入口',
-};
+export const USAGE_SOURCE_IDS = ['overlay', 'popup', 'command', 'web', 'menu', 'retry', 'other'];
+export const usageSourceName = id => t(`bg.usage.source.${id}`);
+/** id → display name. Each name is a getter, so reading it always gives the current language.
+ *  @type {Readonly<Record<string, string>>} */
+export const USAGE_SOURCES = Object.freeze(Object.defineProperties({}, Object.fromEntries(USAGE_SOURCE_IDS
+  .map(id => [id, { get: () => usageSourceName(id), enumerable: true }]))));
 
 const count = value => Number.isSafeInteger(value) && value > 0 ? value : 0;
 const timestamp = value => Number.isFinite(value) && value > 0 ? value : null;
@@ -13,7 +17,7 @@ export function normalizeUsage(raw) {
   if (raw?.version === 1 && raw.actions && typeof raw.actions === 'object') {
     for (const [id, sources] of Object.entries(raw.actions)) {
       if (!/^[a-z][a-z0-9:-]{0,100}$/.test(id) || !sources || typeof sources !== 'object') continue;
-      const valid = Object.fromEntries(Object.keys(USAGE_SOURCES).map(source => [source, count(sources[source])]).filter(([, n]) => n));
+      const valid = Object.fromEntries(USAGE_SOURCE_IDS.map(source => [source, count(sources[source])]).filter(([, n]) => n));
       if (Object.keys(valid).length) actions[id] = valid;
     }
   }
@@ -34,7 +38,7 @@ export function createUsageStore(api, { now = Date.now } = {}) {
     record: (id, origin) => enqueue(async () => {
       if (typeof id !== 'string' || !/^[a-z][a-z0-9:-]{0,100}$/.test(id)) return;
       const stats = await read();
-      const source = Object.hasOwn(USAGE_SOURCES, origin) ? origin : 'other';
+      const source = USAGE_SOURCE_IDS.includes(origin) ? origin : 'other';
       const sources = stats.actions[id] ?? {};
       sources[source] = Math.min(count(sources[source]) + 1, Number.MAX_SAFE_INTEGER);
       stats.actions[id] = sources;

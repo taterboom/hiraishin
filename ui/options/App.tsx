@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { comboFromEvent, displayCombo, holdKeyLabel, nativeEligible, webEligible, reservedReason } from '../../src/keys.js';
-import { CATEGORIES } from '../../src/actions.js';
+import { categoryName } from '../../src/actions.js';
+import { LOCALE_PREFERENCES, applyLocalePreference, getLocale, t } from '../../src/i18n.js';
 import { ActionIcon, SettingsGlyph } from '../popup/icons';
 import { WHEEL_SIZE, Wheel, sectorAt } from '../overlay/Wheel';
 import { OVERLAY_HOLD_MODIFIERS, OVERLAY_SECTORS, PAGE_ORIGINS } from '../../src/settings.js';
@@ -14,12 +15,24 @@ import { UsageStats } from './UsageStats';
 import { LicenseSection } from './LicenseSection';
 
 type Status = { message: string; kind: 'info' | 'error' } | null;
-const CAPABILITY_LABEL: Record<Capability, string> = { navigate: '仅前往', fill: '前往 + 填入', send: '前往 + 填入 + 发送' };
-const categories = CATEGORIES as Record<string, string>;
+const CAPABILITIES: Capability[] = ['navigate', 'fill', 'send'];
+const capabilityLabel = (capability: Capability) => t(`options.capability.${capability}`);
+type LocalePreference = Settings['locale'];
+// The privacy notice is published once per language; English sits at the root.
+const PRIVACY_PAGE: Record<string, string> = { zh: 'zh/privacy.html', ja: 'ja/privacy.html', en: 'privacy.html' };
+
+/** Switch the page's language before React renders the view that carries the preference. */
+function applyPageLocale(preference: LocalePreference | undefined) {
+  applyLocalePreference(preference);
+  document.title = t('options.pageTitle');
+}
 
 export function App() {
   const [view, setView] = useState<SettingsView | null>(null);
-  const settingsClient = useMemo(() => createSettingsClient(api, setView), []);
+  const settingsClient = useMemo(() => createSettingsClient(api, (next: SettingsView) => {
+    applyPageLocale(next.settings.locale);
+    setView(next);
+  }), []);
   const [status, setStatus] = useState<Status>(null);
   const [recording, setRecording] = useState<{ action: ActionInfo; combo: string | null; note: string } | null>(null);
   const [targetsOpen, setTargetsOpen] = useState(false);
@@ -46,12 +59,12 @@ export function App() {
   }, [load, show]);
 
   const saveSettings = useCallback(async (mutate: (settings: Settings) => void) => {
-    try { await settingsClient.save(mutate); show('已保存'); return true; }
+    try { await settingsClient.save(mutate); show(t('options.saved')); return true; }
     catch (error) { show((error as Error).message, 'error'); return false; }
   }, [settingsClient, show]);
 
   const setBinding = useCallback(async (actionId: string, combo: string | null) => {
-    try { await settingsClient.setBinding(actionId, combo); show(combo ? '网页快捷键已保存。' : '已清除网页快捷键。'); }
+    try { await settingsClient.setBinding(actionId, combo); show(combo ? t('options.web.saved') : t('options.web.cleared')); }
     catch (error) { show((error as Error).message, 'error'); }
   }, [settingsClient, show]);
 
@@ -64,19 +77,21 @@ export function App() {
   const platform = view?.status.platform ?? 'unknown';
   const label = (combo: string) => (combo ? displayCombo(combo, platform) : '');
 
-  if (!view) return <main className="page"><Header /><p className="lead">读取设置…</p>{status && <StatusBar status={status} />}</main>;
+  if (!view) return <main className="page"><Header /><p className="lead">{t('options.loading')}</p>{status && <StatusBar status={status} />}</main>;
 
   return (
     <main className="page">
-      <Header />
+      {/* A worker still running an older build sends settings without `locale`; show the picker anyway. */}
+      <Header locale={view.settings.locale ?? 'auto'}
+        onLocale={locale => saveSettings(settings => { settings.locale = locale; })} />
       <LicenseSection show={show} />
 
       <ActionsSection view={view} label={label} onRecord={action => setRecording({ action, combo: null, note: '' })}
-        onClear={id => setBinding(id, null)} onGrant={async () => { const ok = await requestPagePermission(); show(ok ? '已允许访问网页。已有页面无需刷新。' : '未获得权限。', ok ? 'info' : 'error'); }}
+        onClear={id => setBinding(id, null)} onGrant={async () => { const ok = await requestPagePermission(); show(ok ? t('options.web.granted') : t('options.permissionDenied'), ok ? 'info' : 'error'); }}
         onSaveDisabled={sites => saveSettings(settings => { settings.webShortcuts.disabledSites = sites; })}
         onOpenNative={action => {
           chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
-          show(`请在 Chrome 快捷键页为「${action.name}」设置组合，返回本页会显示实际绑定。`);
+          show(t('options.native.openFor', { name: action.name }));
         }}
         onOverlay={enabled => saveSettings(settings => { settings.overlay.enabled = enabled; })}
         onHoldCode={code => saveSettings(settings => { settings.overlay.holdCode = code; })}
@@ -93,32 +108,47 @@ export function App() {
             if (!recording.combo) return;
             if (!view.status.granted) {
               const granted = await requestPagePermission();
-              if (!granted) show('未获得网页访问权限，快捷键已保存但未启用。', 'error');
+              if (!granted) show(t('options.web.savedWithoutPermission'), 'error');
             }
             const { action, combo } = recording;
             setRecording(null);
             await setBinding(action.id, combo);
           }}
-          onNative={() => { setRecording(null); chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }); show('请在 Chrome 快捷键页为该动作设置组合，返回后这里会显示实际绑定。'); }} />
+          onNative={() => { setRecording(null); chrome.tabs.create({ url: 'chrome://extensions/shortcuts' }); show(t('options.native.open')); }} />
       )}
       <UsageStats actions={view.actions} />
       <footer className="settings-footer"><span>飛雷神 {chrome.runtime.getManifest().version}</span>
-        <a href="privacy.html" target="_blank" rel="noreferrer">隐私与数据说明</a>
+        <a href={PRIVACY_PAGE[getLocale()] ?? PRIVACY_PAGE.en} target="_blank" rel="noreferrer">{t('options.footer.privacy')}</a>
       </footer>
     </main>
   );
 }
 
-function Header() {
+/** The language picker appears once settings have loaded, since it saves into them. */
+function Header({ locale, onLocale }: { locale?: LocalePreference; onLocale?: (locale: LocalePreference) => void }) {
   return (
     <header className="brand">
       <img className="brand-mark" src="icons/mark.svg" alt="" width="46" height="46" />
       <div>
         <h1>飛雷神 <span>HIRAISHIN</span></h1>
-        <p>配置轮盘分区、快捷键与 AI 目标。</p>
+        <p>{t('options.header.tagline')}</p>
       </div>
+      {locale && onLocale && <label className="brand-locale">
+        <span>{t('options.language.label')}</span>
+        <select value={locale} onChange={event => onLocale(event.target.value as LocalePreference)}>
+          {(LOCALE_PREFERENCES as LocalePreference[]).map(value => <option key={value} value={value}>{t(`locale.${value}`)}</option>)}
+        </select>
+      </label>}
     </header>
   );
+}
+
+/** A label that changes with state but keeps the width of its widest text, so a button never
+ *  resizes mid-interaction and pushes its neighbours around ("Save target" ↔ "Saving…"). */
+function StableLabel({ labels, index }: { labels: string[]; index: number }) {
+  return <span className="stable-label">
+    {labels.map((label, at) => <span key={at} data-active={at === index || undefined}>{label}</span>)}
+  </span>;
 }
 
 function StatusBar({ status }: { status: NonNullable<Status> }) {
@@ -128,9 +158,9 @@ function StatusBar({ status }: { status: NonNullable<Status> }) {
 /** Only what the two key columns cannot show on their own: a binding that will not actually fire. */
 function webProblem(action: ActionInfo, view: SettingsView): string {
   if (!action.web || !action.webBinding) return '';
-  if (!view.status.granted) return '等待网站授权，需先允许访问网页';
-  if (action.shadowed) return '已由浏览器快捷键承接，网页内不再执行';
-  if (action.conflict) return '与其他动作使用了同一组合，只有第一个生效';
+  if (!view.status.granted) return t('options.problem.ungranted');
+  if (action.shadowed) return t('options.problem.shadowed');
+  if (action.conflict) return t('options.problem.conflict');
   return '';
 }
 
@@ -160,10 +190,10 @@ function ActionsSection({ view, label, onRecord, onClear, onGrant, onSaveDisable
   return (
     <section id="actions" aria-labelledby="actions-heading">
       <div className="actions-head">
-        <h2 id="actions-heading">动作</h2>
-        <button className="button subtle" type="button" onClick={() => chrome.tabs.create({ url: 'chrome://extensions/shortcuts' })}>打开 Chrome 快捷键管理 ↗</button>
+        <h2 id="actions-heading">{t('options.actions.heading')}</h2>
+        <button className="button subtle" type="button" onClick={() => chrome.tabs.create({ url: 'chrome://extensions/shortcuts' })}>{t('options.actions.openChromeShortcuts')}</button>
       </div>
-      <p className="lead">工具栏与网页轮盘共用下方分区配置。浏览器快捷键由 Chrome 管理；网页快捷键在已授权的网页内生效。</p>
+      <p className="lead">{t('options.actions.lead')}</p>
 
       <div className="overlay-settings">
         <div className="overlay-settings-head">
@@ -171,41 +201,43 @@ function ActionsSection({ view, label, onRecord, onClear, onGrant, onSaveDisable
             <input type="checkbox" checked={overlayEnabled} aria-expanded={overlayEnabled} aria-controls="wheel-settings"
               onChange={event => onOverlay(event.target.checked)} />
             <span>
-              <strong>在网页中使用轮盘</strong>
-              <small>开启后，按住按键并甩动鼠标即可使用。</small>
+              <strong>{t('options.overlay.toggle')}</strong>
+              <small>{t('options.overlay.toggleHint')}</small>
             </span>
           </label>
         </div>
         {overlayEnabled && <div id="wheel-settings">
           {!view.status.granted && <div className="overlay-permission-note">
-            <p>轮盘已开启。允许网页访问后，即可按住 {holdKeyLabel(view.settings.overlay.holdCode, view.status.platform)} 并甩动鼠标使用。</p>
-            <button type="button" className="button" onClick={onGrant}>允许在网页使用</button>
+            <p>{t('options.overlay.permissionNote', { key: holdKeyLabel(view.settings.overlay.holdCode, view.status.platform) })}</p>
+            <button type="button" className="button" onClick={onGrant}>{t('options.overlay.grant')}</button>
           </div>}
           <div className="overlay-controls">
             <label className="hold-field">
-              <span>触发按键</span>
-              <select className="hold-select" aria-label="轮盘触发按键" value={view.settings.overlay.holdCode}
+              <span>{t('options.overlay.holdKey')}</span>
+              <select className="hold-select" aria-label={t('options.overlay.holdKeyAria')} value={view.settings.overlay.holdCode}
                 onChange={event => onHoldCode(event.target.value)}>
-                <option value="auto">{`默认（${holdKeyLabel('auto', view.status.platform)}）`}</option>
+                <option value="auto">{t('options.overlay.holdDefault', { key: holdKeyLabel('auto', view.status.platform) })}</option>
                 {OVERLAY_HOLD_MODIFIERS.map((code: string) => (
                   <option key={code} value={code}>{holdKeyLabel(code, view.status.platform)}</option>
                 ))}
                 <option value="KeyZ">Z</option>
               </select>
             </label>
-            <p className="overlay-gesture">按住{view.settings.overlay.holdMs > 0 ? ` ${view.settings.overlay.holdMs} 毫秒` : ''}
-              <span aria-hidden="true"> → </span>甩动选择<span aria-hidden="true"> → </span>松开执行</p>
+            <p className="overlay-gesture">{view.settings.overlay.holdMs > 0
+              ? t('options.overlay.gestureHoldMs', { count: view.settings.overlay.holdMs }) : t('options.overlay.gestureHold')}
+              <span aria-hidden="true"> → </span>{t('options.overlay.gestureFlick')}<span aria-hidden="true"> → </span>{t('options.overlay.gestureRelease')}</p>
           </div>
           <details className="overlay-help">
-            <summary>使用说明与取消方式</summary>
-            <p>仅按住按键不会弹出；松手时指针在圆心则不执行。右键或 Esc 取消，按其他键或切换窗口会收起。关闭右侧标签页需再次确认。</p>
-            <p>输入框内也可使用 Option / Alt 等修饰键甩动触发；字母、数字触发键在输入框内禁用。需要网页访问权限；地址栏与 Chrome 内部页面不适用。</p>
+            <summary>{t('options.overlay.helpSummary')}</summary>
+            <p>{t('options.overlay.helpGesture')}</p>
+            <p>{t('options.overlay.helpScope')}</p>
           </details>
         </div>}
         <WheelSettings view={view} saveSettings={saveSettings} />
       </div>
       <table className="shortcut-table">
-        <thead><tr><th>动作</th><th>轮盘位置</th><th>浏览器快捷键</th><th>网页快捷键</th></tr></thead>
+        <thead><tr><th>{t('options.table.action')}</th><th>{t('options.table.wheelPosition')}</th>
+          <th>{t('options.table.browserShortcut')}</th><th>{t('options.table.webShortcut')}</th></tr></thead>
         <tbody>
           {[...groups].map(([category, actions]) => [
             <tr key={`group-${category}`} className="group-row">
@@ -213,11 +245,11 @@ function ActionsSection({ view, label, onRecord, onClear, onGrant, onSaveDisable
                   table formatting context, so colSpan stops working and the text stacks vertically. */}
               <th colSpan={4}>
                 <div className="group-row-inner">
-                  <span className="group-label">{categories[category] ?? category}</span>
+                  <span className="group-label">{categoryName(category)}</span>
                   {/* An icon, not a label: 11px text beside an 11px group heading competed with it. */}
                   {category === 'ai' && (
                     <button type="button" className="group-action" onClick={onOpenTargets}
-                      title="管理 AI 目标与发送行为" aria-label="管理 AI 目标与发送行为">
+                      title={t('options.table.manageTargets')} aria-label={t('options.table.manageTargets')}>
                       <SettingsGlyph />
                     </button>
                   )}
@@ -236,11 +268,11 @@ function ActionsSection({ view, label, onRecord, onClear, onGrant, onSaveDisable
                     </span></div>
                   </td>
                   <td className="wheel-position-cell">
-                    <button type="button" className={`wheel-position-button${view.settings.overlay.slots.includes(action.id) ? '' : ' empty'}`} aria-label={`设置「${action.name}」的位置`}
+                    <button type="button" className={`wheel-position-button${view.settings.overlay.slots.includes(action.id) ? '' : ' empty'}`} aria-label={t('options.table.setPositionAria', { name: action.name })}
                       aria-haspopup="dialog" onClick={() => setPositionAction(action)}>
                       {view.settings.overlay.slots.includes(action.id)
                         ? <WheelPositions actionId={action.id} slots={view.settings.overlay.slots} />
-                        : '设置'}
+                        : t('options.table.setPosition')}
                     </button>
                   </td>
                   <td className={action.command ? 'kbd-cell' : 'muted'}>
@@ -248,20 +280,20 @@ function ActionsSection({ view, label, onRecord, onClear, onGrant, onSaveDisable
                       <>
                         {/* Native bindings live in Chrome's own settings; clicking the key opens them. */}
                         <button type="button" className={`kbd-button${action.nativeCombo ? '' : ' empty'}`}
-                          title="在 Chrome 快捷键页设置" onClick={() => onOpenNative(action)}>
-                          {label(action.nativeCombo) || '未绑定'}
+                          title={t('options.table.nativeTitle')} onClick={() => onOpenNative(action)}>
+                          {label(action.nativeCombo) || t('options.table.unbound')}
                         </button>
-                        {!action.nativeCombo && action.suggested && <span className="hint warn">默认 {label(action.suggested)} 未生效，可能被其他扩展占用</span>}
+                        {!action.nativeCombo && action.suggested && <span className="hint warn">{t('options.table.suggestedInactive', { combo: label(action.suggested) })}</span>}
                       </>
-                    ) : action.web ? '仅网页快捷键' : '仅面板'}
+                    ) : action.web ? t('options.table.webOnly') : t('options.table.panelOnly')}
                   </td>
                   <td className={action.web ? 'kbd-cell' : 'muted'}>
                     {action.web ? (
                       <>
-                        <button type="button" className={`kbd-button${action.webBinding ? '' : ' empty'}`} title={action.webBinding ? '点击修改' : '点击录入'} onClick={() => onRecord(action)}>
-                          {label(action.webBinding) || '录入'}
+                        <button type="button" className={`kbd-button${action.webBinding ? '' : ' empty'}`} title={action.webBinding ? t('options.table.editTitle') : t('options.table.recordTitle')} onClick={() => onRecord(action)}>
+                          {label(action.webBinding) || t('options.table.record')}
                         </button>
-                        {action.webBinding && <button type="button" className="clear" title="清除" aria-label={`清除 ${action.name} 的网页快捷键`} onClick={() => onClear(action.id)}>×</button>}
+                        {action.webBinding && <button type="button" className="clear" title={t('options.table.clearTitle')} aria-label={t('options.table.clearAria', { name: action.name })} onClick={() => onClear(action.id)}>×</button>}
                         {problem && <span className="hint warn">{problem}</span>}
                       </>
                     ) : '—'}
@@ -277,10 +309,10 @@ function ActionsSection({ view, label, onRecord, onClear, onGrant, onSaveDisable
         onClose={() => setPositionAction(null)} />}
       <KeyProbe view={view} label={label} />
       <details className="advanced">
-        <summary>按网站停用网页快捷键</summary>
-        <label htmlFor="disabled-sites">每行一个域名，例如 docs.google.com</label>
+        <summary>{t('options.sites.summary')}</summary>
+        <label htmlFor="disabled-sites">{t('options.sites.label')}</label>
         <textarea id="disabled-sites" rows={3} spellCheck={false} value={sites} onChange={event => setSites(event.target.value)} />
-        <button className="button" style={{verticalAlign: 'top', marginLeft: 8}} type="button" onClick={() => onSaveDisabled(sites.split('\n').map(line => line.trim().toLowerCase()).filter(Boolean))}>保存</button>
+        <button className="button" style={{verticalAlign: 'top', marginLeft: 8}} type="button" onClick={() => onSaveDisabled(sites.split('\n').map(line => line.trim().toLowerCase()).filter(Boolean))}>{t('options.save')}</button>
       </details>
     </section>
   );
@@ -291,16 +323,16 @@ function KeyProbe({ view, label }: { view: SettingsView; label: (combo: string) 
   const platform = view.status.platform;
   return (
     <details className="advanced">
-      <summary>试按区：检查一个组合键能否到达网页</summary>
-      <p className="lead">把光标放进输入框并按下组合键。这里能显示出来，说明按键没有被系统或浏览器拦截；如果按了却没有任何反应，就是被拦截了，网页快捷键不会生效。</p>
-      <input className="probe" placeholder="在这里按组合键" onKeyDown={event => {
+      <summary>{t('options.probe.summary')}</summary>
+      <p className="lead">{t('options.probe.lead')}</p>
+      <input className="probe" placeholder={t('options.probe.placeholder')} onKeyDown={event => {
         event.preventDefault();
         const combo = comboFromEvent(event, platform);
-        if (!combo) { setResult(['Control', 'Shift', 'Alt', 'Meta'].includes(event.key) ? '' : '需要 Ctrl / Alt / Command 等修饰键加一个按键。'); return; }
+        if (!combo) { setResult(['Control', 'Shift', 'Alt', 'Meta'].includes(event.key) ? '' : t('options.needModifier')); return; }
         const owner = view.actions.find(action => action.webBinding === combo || action.nativeCombo === combo);
-        const notes = [`收到 ${label(combo)}`];
-        if (owner) notes.push(`当前绑定：${owner.name}${owner.nativeCombo === combo ? '（浏览器快捷键）' : '（网页快捷键）'}`);
-        else notes.push('尚未绑定任何动作');
+        const notes = [t('options.probe.received', { combo: label(combo) })];
+        if (owner) notes.push(t(owner.nativeCombo === combo ? 'options.probe.boundNative' : 'options.probe.boundWeb', { name: owner.name }));
+        else notes.push(t('options.probe.unbound'));
         const reserved = reservedReason(combo, platform);
         if (reserved) notes.push(reserved);
         setResult(notes.join(' · '));
@@ -337,7 +369,7 @@ function WheelSettings({ view, saveSettings }: {
   return (
     <div className="wheel-config" role="group" aria-labelledby="wheel-heading">
       <div className="wheel-config-head">
-        <h3 id="wheel-heading">轮盘分区</h3>
+        <h3 id="wheel-heading">{t('options.wheel.heading')}</h3>
       </div>
       <div className="wheel-editor">
         <div className="wheel-preview">
@@ -355,13 +387,13 @@ function WheelSettings({ view, saveSettings }: {
             <div className="wheel-frame">
               <Wheel slots={slots.map(id => (id ? choices.find(item => item.id === id) ?? null : null))}
                 activeIndex={picked} position={{ left: WHEEL_SIZE / 2, top: WHEEL_SIZE / 2 }}
-                hint="点击一瓣选中" unavailable={() => ''} />
+                hint={t('options.wheel.previewHint')} unavailable={() => ''} />
             </div>
           </div>
         </div>
         <div className="wheel-side">
         <div className="slot-count">
-          <span id="slot-count-label">分区数</span>
+          <span id="slot-count-label">{t('options.wheel.count')}</span>
           <div className="segmented" role="radiogroup" aria-labelledby="slot-count-label">
             {OVERLAY_SECTORS.map((count: number) => <label key={count} className="segment">
               <input type="radio" name="slot-count" value={count} checked={slots.length === count}
@@ -371,16 +403,16 @@ function WheelSettings({ view, saveSettings }: {
           </div>
         </div>
         <div className="wheel-assignment">
-          <p className="assignment-caption">当前分区</p>
-          <strong className="selected-direction">{wheelDirection(picked, slots.length)}<span>第 {picked + 1} 瓣</span></strong>
+          <p className="assignment-caption">{t('options.wheel.current')}</p>
+          <strong className="selected-direction">{wheelDirection(picked, slots.length)}<span>{t('options.wheel.sector', { index: picked + 1 })}</span></strong>
           <div className="slot-assign">
-            <span>分区动作</span>
+            <span>{t('options.wheel.sectorAction')}</span>
             <WheelActionPicker key={`${slots.length}:${picked}`} actions={choices} value={slots[picked]} slots={slots}
               onChange={id => saveSettings(settings => {
                 settings.overlay.slots = slots.map((current, at) => at === picked ? id : current);
               })} />
           </div>
-          <p className="assignment-hint">点击轮盘可切换分区。留空的分区松手时不会执行任何动作。</p>
+          <p className="assignment-hint">{t('options.wheel.assignHint')}</p>
         </div>
         </div>
       </div>
@@ -430,18 +462,18 @@ function TargetsDialog({ view, saveSettings, show, onSync, onClose }: {
       settings.targets.custom.push(target);
     });
     setSaving(false);
-    if (!saved) { setSaveError('未能保存，请重试。填写的内容已保留。'); return; }
+    if (!saved) { setSaveError(t('options.targets.saveFailed')); return; }
     setForm(emptyTarget()); setMatchText(''); setOpen(false);
   };
 
   return (
     <dialog className="wide" ref={dialogRef} onClose={onClose} aria-labelledby="targets-heading">
       <div className="dialog-head">
-        <h3 id="targets-heading">AI 目标与发送行为</h3>
-        <button type="button" className="icon-close" aria-label="关闭" onClick={() => dialogRef.current?.close()}>×</button>
+        <h3 id="targets-heading">{t('options.targets.heading')}</h3>
+        <button type="button" className="icon-close" aria-label={t('options.close')} onClick={() => dialogRef.current?.close()}>×</button>
       </div>
-      <p className="lead">填入和发送需要访问目标网站的权限。目标选择规则：当前窗口最左侧匹配的标签页，没有则在来源标签右侧新建。</p>
-      <label className="field"><span>默认目标</span>
+      <p className="lead">{t('options.targets.lead')}</p>
+      <label className="field"><span>{t('options.targets.default')}</span>
         <select value={view.settings.defaultTargetId} onChange={event => {
           const value = event.target.value;
           void saveSettings(settings => { settings.defaultTargetId = value; });
@@ -455,62 +487,62 @@ function TargetsDialog({ view, saveSettings, show, onSync, onClose }: {
             <div className="target-head"><strong>{target.name}</strong><span className="muted">{target.openUrl}</span></div>
             <div className="target-controls">
               {target.builtin ? (
-                <select aria-label={`${target.name} 的能力`} value={target.capability} onChange={event => {
+                <select aria-label={t('options.targets.capabilityAria', { name: target.name })} value={target.capability} onChange={event => {
                   const value = event.target.value as Capability;
                   void saveSettings(settings => { settings.targets.enabled[target.id] = value; });
                 }}>
-                  {(Object.keys(CAPABILITY_LABEL) as Capability[]).map(value => <option key={value} value={value}>{CAPABILITY_LABEL[value]}</option>)}
+                  {CAPABILITIES.map(value => <option key={value} value={value}>{capabilityLabel(value)}</option>)}
                 </select>
-              ) : <span className="pill muted">{CAPABILITY_LABEL[target.capability]}</span>}
-              <span className={`pill ${target.granted ? 'ok' : 'warn'}`}>{target.granted ? '网站权限已允许' : '未允许访问网站'}</span>
+              ) : <span className="pill muted">{capabilityLabel(target.capability)}</span>}
+              <span className={`pill ${target.granted ? 'ok' : 'warn'}`}>{target.granted ? t('options.targets.granted') : t('options.targets.notGranted')}</span>
               {!target.granted && target.capability !== 'navigate' && (
                 <button type="button" className="button small" onClick={async () => {
                   const granted = await chrome.permissions.request({ origins: target.origins });
-                  if (granted) { await onSync(); show(`已允许访问 ${target.name}。`); } else show('未获得权限。', 'error');
-                }}>允许访问</button>
+                  if (granted) { await onSync(); show(t('options.targets.allowed', { name: target.name })); } else show(t('options.permissionDenied'), 'error');
+                }}>{t('options.targets.allow')}</button>
               )}
               {!target.builtin && (
                 <>
-                  <button type="button" className="link" onClick={() => edit(target)}>编辑</button>
+                  <button type="button" className="link" onClick={() => edit(target)}>{t('options.edit')}</button>
                   <button type="button" className="link danger" onClick={() => saveSettings(settings => {
                     settings.targets.custom = settings.targets.custom.filter(item => item.id !== target.id);
                     if (settings.defaultTargetId === target.id) settings.defaultTargetId = view.targets.find(item => item.builtin)!.id;
-                  })}>删除</button>
+                  })}>{t('options.delete')}</button>
                 </>
               )}
             </div>
-            <p className="muted small-text">匹配：{target.match.join('，')}</p>
+            <p className="muted small-text">{t('options.targets.match', { patterns: target.match.join(t('options.targets.matchSeparator')) })}</p>
           </div>
         ))}
       </div>
       <details className="advanced" open={open} onToggle={event => setOpen((event.target as HTMLDetailsElement).open)}>
-        <summary>添加自定义目标</summary>
+        <summary>{t('options.targets.addCustom')}</summary>
         <form className="target-form" onSubmit={submit}>
-          <label className="field"><span>名称</span><input ref={nameRef} required maxLength={40} value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} /></label>
-          <label className="field"><span>打开地址</span><input type="url" required placeholder="https://example.com/chat" value={form.openUrl} onChange={event => setForm({ ...form, openUrl: event.target.value })} /></label>
-          <label className="field"><span>匹配规则（每行一个，* 为通配）</span><textarea rows={2} placeholder="https://example.com/chat/*" value={matchText} onChange={event => setMatchText(event.target.value)} /></label>
-          <label className="field"><span>能力</span>
+          <label className="field"><span>{t('options.targets.name')}</span><input ref={nameRef} required maxLength={40} value={form.name} onChange={event => setForm({ ...form, name: event.target.value })} /></label>
+          <label className="field"><span>{t('options.targets.openUrl')}</span><input type="url" required placeholder="https://example.com/chat" value={form.openUrl} onChange={event => setForm({ ...form, openUrl: event.target.value })} /></label>
+          <label className="field"><span>{t('options.targets.matchRules')}</span><textarea rows={2} placeholder="https://example.com/chat/*" value={matchText} onChange={event => setMatchText(event.target.value)} /></label>
+          <label className="field"><span>{t('options.targets.capability')}</span>
             <select value={form.capability} onChange={event => setForm({ ...form, capability: event.target.value as Capability })}>
-              {(Object.keys(CAPABILITY_LABEL) as Capability[]).map(value => <option key={value} value={value}>{CAPABILITY_LABEL[value]}</option>)}
+              {CAPABILITIES.map(value => <option key={value} value={value}>{capabilityLabel(value)}</option>)}
             </select>
           </label>
-          <label className="field"><span>输入框选择器（可选）</span><input placeholder="textarea, [contenteditable=true]" value={form.selectors.input} onChange={event => setForm({ ...form, selectors: { ...form.selectors, input: event.target.value } })} /></label>
-          <label className="field"><span>发送按钮选择器（可选）</span><input placeholder="button[type=submit]" value={form.selectors.submit} onChange={event => setForm({ ...form, selectors: { ...form.selectors, submit: event.target.value } })} /></label>
+          <label className="field"><span>{t('options.targets.inputSelector')}</span><input placeholder="textarea, [contenteditable=true]" value={form.selectors.input} onChange={event => setForm({ ...form, selectors: { ...form.selectors, input: event.target.value } })} /></label>
+          <label className="field"><span>{t('options.targets.submitSelector')}</span><input placeholder="button[type=submit]" value={form.selectors.submit} onChange={event => setForm({ ...form, selectors: { ...form.selectors, submit: event.target.value } })} /></label>
           {saveError && <p className="form-error" role="alert">{saveError}</p>}
           <div className="form-buttons">
-            <button className="button" type="submit" disabled={saving}>{saving ? '保存中…' : '保存目标'}</button>
-            <button className="button subtle" type="button" onClick={() => { setForm(emptyTarget()); setMatchText(''); }}>清空</button>
+            <button className="button" type="submit" disabled={saving}><StableLabel labels={[t('options.targets.save'), t('options.saving')]} index={saving ? 1 : 0} /></button>
+            <button className="button subtle" type="button" onClick={() => { setForm(emptyTarget()); setMatchText(''); }}>{t('options.targets.clear')}</button>
           </div>
         </form>
       </details>
 
-      <h4>发送行为</h4>
+      <h4>{t('options.targets.sendHeading')}</h4>
       <label className="toggle">
         <input type="checkbox" checked={view.settings.returnAfterSend} onChange={event => {
           const checked = event.target.checked;
           void saveSettings(settings => { settings.returnAfterSend = checked; });
         }} />
-        <span><strong>发送后返回来源页</strong><small>确认消息提交后回到原标签页；默认停留在 AI 页面。“仅填入”始终停留。</small></span>
+        <span><strong>{t('options.targets.returnAfterSend')}</strong><small>{t('options.targets.returnAfterSendHint')}</small></span>
       </label>
     </dialog>
   );
@@ -531,18 +563,17 @@ function Recorder({ view, platform, recording, setRecording, onSaveWeb, onNative
       event.stopPropagation();
       const combo = comboFromEvent(event, platform);
       if (!combo) {
-        if (!['Control', 'Shift', 'Alt', 'Meta'].includes(event.key)) setRecording({ ...recording, note: '需要 Ctrl / Alt / Command 等修饰键加一个按键。' });
+        if (!['Control', 'Shift', 'Alt', 'Meta'].includes(event.key)) setRecording({ ...recording, note: t('options.needModifier') });
         return;
       }
       const taken = view.actions.find(item => item.id !== recording.action.id && (item.nativeCombo === combo || item.webBinding === combo));
       const notes: string[] = [];
-      if (taken) notes.push(`该组合已用于“${taken.name}”，保存后会冲突。`);
+      if (taken) notes.push(t('options.recorder.taken', { name: taken.name }));
       const reserved = reservedReason(combo, platform);
       if (reserved) notes.push(reserved);
       notes.push(nativeEligible(combo, platform)
-        ? 'Chrome 支持此组合：推荐在 Chrome 快捷键页设置为浏览器快捷键，全局生效；也可仅在网页内使用。'
-        : 'Chrome 原生不支持此组合，将作为网页快捷键，仅在允许注入脚本的网页内生效。');
-      if (/Ctrl\+(Shift\+)?Minus$/.test(combo) && platform !== 'mac') notes.push('Windows / Linux 上将替代“缩小页面”的浏览器快捷键。');
+        ? t('options.recorder.nativeOk') : t('options.recorder.webOnly'));
+      if (/Ctrl\+(Shift\+)?Minus$/.test(combo) && platform !== 'mac') notes.push(t('options.recorder.zoomOut'));
       setRecording({ ...recording, combo, note: notes.join(' ') });
     };
     document.addEventListener('keydown', onKey, true);
@@ -552,14 +583,14 @@ function Recorder({ view, platform, recording, setRecording, onSaveWeb, onNative
   const nativeOk = recording.combo ? nativeEligible(recording.combo, platform) : false;
   return (
     <dialog ref={ref} onClose={() => setRecording(null)}>
-      <h3>录入快捷键：{recording.action.name}</h3>
-      <p>按下想要的组合键。录入期间不会执行任何动作。</p>
-      <p className="combo">{recording.combo ? displayCombo(recording.combo, platform) : '等待按键…'}</p>
+      <h3>{t('options.recorder.title', { name: recording.action.name })}</h3>
+      <p>{t('options.recorder.lead')}</p>
+      <p className="combo">{recording.combo ? displayCombo(recording.combo, platform) : t('options.recorder.waiting')}</p>
       <p className="note">{recording.note}</p>
       <div className="form-buttons">
-        {nativeOk && recording.action.command && <button className="button" type="button" onClick={onNative}>在 Chrome 中设置此组合 ↗</button>}
-        {recording.combo && webEligible(recording.combo) && <button className="button" type="button" onClick={onSaveWeb}>{nativeOk ? '仅网页内使用' : '保存并启用网页快捷键'}</button>}
-        <button className="button subtle" type="button" onClick={() => ref.current?.close()}>取消</button>
+        {nativeOk && recording.action.command && <button className="button" type="button" onClick={onNative}>{t('options.recorder.setInChrome')}</button>}
+        {recording.combo && webEligible(recording.combo) && <button className="button" type="button" onClick={onSaveWeb}>{nativeOk ? t('options.recorder.webOnlyButton') : t('options.recorder.saveWeb')}</button>}
+        <button className="button subtle" type="button" onClick={() => ref.current?.close()}>{t('options.cancel')}</button>
       </div>
     </dialog>
   );

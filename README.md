@@ -2,17 +2,19 @@
 
 **用轮盘快速操作浏览器：按住 Option / Alt 甩动鼠标、松开执行，切换、整理和复制标签页，把选中文字发送到 ChatGPT / Claude。** 也可点击工具栏轮盘，或配置快捷键。
 
-*Hiraishin: tab history back/forward, tab tidying, and send-selection-to-ChatGPT/Claude for Chrome. Free at launch; runs locally.*
+*Hiraishin: tab history back/forward, tab tidying, and send-selection-to-ChatGPT/Claude for Chrome. 14-day free trial, then a one-time purchase; runs locally.*
 
 Manifest V3 · 后台与内容脚本为无框架 ES 模块 · 面板与设置页为 React + TypeScript · esbuild 打包
 
 - 产品方向、首发范围、决策记录、传播与商业化：[产品与技术方案](docs/PRODUCT_TECH_SPEC.md)
-- 完整试用、一次性购买、多渠道收款与统一授权：[支付与授权方案](docs/PAYMENT_PLAN.md)（规划，尚未接入收费）
+- 完整试用、一次性购买、多渠道收款与统一授权：[支付与授权方案](docs/PAYMENT_PLAN.md)（试用与授权已实现；正式收款待授权服务上线）
 - 代码组织、消息协议、存储、构建与测试：[架构说明](docs/ARCHITECTURE.md)
 - 落地页与面向大模型的说明：[site/](site/)（`index.html`、`llms.txt`、`actions.json`）
 - 上线前审查：[docs/RELEASE_REVIEW.md](docs/RELEASE_REVIEW.md)
 - 隐私说明：[site/privacy.html](site/privacy.html)
 - 商店文案：[docs/STORE_LISTING.md](docs/STORE_LISTING.md)
+
+界面支持简体中文、日本語、English：默认跟随浏览器语言，中日英以外显示英文，可在设置页右上角切换。
 
 ## 安装
 
@@ -161,7 +163,7 @@ docs/                    产品方案、架构说明、商店文案
 
 **会上传我的浏览数据吗？** 不会。设置和轨迹只保存在本机；只有你主动填入或发送时，选中的文字才会交给你选择的 AI 网站。
 
-**收费吗？** 当前版本免费，不设 Free / Pro 分层或自定义目标数量限制；收费方案以后另行讨论。没有订阅、云同步或提示词模板。
+**收费吗？** 所有功能免费试用 14 天，从第一次成功执行动作开始计时；试用结束后一次性购买即可继续使用，不是订阅，也不分 Free / Pro 版本。试用结束时设置和待处理内容都会保留。价格在开放购买时公布。
 
 ### 手动验收（真实 Chrome）
 

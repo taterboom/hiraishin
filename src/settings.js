@@ -1,5 +1,6 @@
 import { normalizeCombo } from './keys.js';
 import { BUILTIN_TARGETS } from './targets.js';
+import { LOCALE_PREFERENCES } from './i18n.js';
 
 export const SETTINGS_VERSION = 4;
 export const SETTINGS_KEY = 'settings';
@@ -23,7 +24,7 @@ const MINUS_BINDINGS = { 'history-back': 'Ctrl+Minus', 'history-forward': 'Ctrl+
 /**
  * @typedef {{ id: string, name: string, match: string[], openUrl: string,
  *   capability: 'navigate' | 'fill' | 'send', selectors: { input: string, submit: string } }} CustomTarget
- * @typedef {{ version: number, returnAfterSend: boolean,
+ * @typedef {{ version: number, locale: string, returnAfterSend: boolean,
  *   defaultTargetId: string, pinnedActions: string[],
  *   webShortcuts: { bindings: Record<string, string>, disabledSites: string[] },
  *   overlay: { enabled: boolean, holdCode: string, holdMs: number, slots: (string | null)[] },
@@ -34,6 +35,8 @@ const MINUS_BINDINGS = { 'history-back': 'Ctrl+Minus', 'history-forward': 'Ctrl+
 export function defaultSettings() {
   return {
     version: SETTINGS_VERSION,
+    // `auto` follows the browser's UI language; otherwise one of i18n.js LOCALES.
+    locale: 'auto',
     returnAfterSend: false,
     defaultTargetId: BUILTIN_TARGETS[0].id,
     pinnedActions: [...DEFAULT_PINNED],
@@ -81,6 +84,7 @@ export function normalizeSettings(raw) {
     settings.webShortcuts.bindings = { ...MINUS_BINDINGS };
     return settings;
   }
+  if (LOCALE_PREFERENCES.includes(raw.locale)) settings.locale = raw.locale;
   if (typeof raw.returnAfterSend === 'boolean') settings.returnAfterSend = raw.returnAfterSend;
   if (isString(raw.defaultTargetId) && raw.defaultTargetId) settings.defaultTargetId = raw.defaultTargetId;
   if (Array.isArray(raw.pinnedActions)) settings.pinnedActions = [...new Set(stringList(raw.pinnedActions))];

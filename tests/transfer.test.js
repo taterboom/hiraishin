@@ -5,6 +5,9 @@ import { createTargetService } from '../src/targets.js';
 import { createSettingsStore, SETTINGS_KEY } from '../src/settings.js';
 import { createSelectionReader } from '../src/selection.js';
 import { createFakeChrome, tab } from './fake-chrome.js';
+import { setLocale } from '../src/i18n.js';
+
+setLocale('zh'); // The assertions below match the Chinese messages.
 
 function setup({ settings = {}, adapter, selection = 'selected words', tabs, granted = true } = {}) {
   const env = createFakeChrome({

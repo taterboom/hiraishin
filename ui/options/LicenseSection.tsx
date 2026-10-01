@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LICENSE_KEY, TRIAL_MS } from '../../src/license.js';
+import { LOCALE_TAGS, getLocale, t } from '../../src/i18n.js';
 import { api } from '../shared/api';
 import type { LicenseView } from '../shared/types';
 
@@ -11,12 +12,13 @@ const POLL_MS = 20_000;
 const POLL_WINDOW_MS = 10 * 60_000;
 
 function summary(license: LicenseView): string {
-  if (license.state === 'licensed') return '已购买，感谢支持。';
-  if (license.state === 'revoked') return '授权已被撤销（例如已退款）。如有疑问，请带上授权码联系我们。';
-  if (license.state === 'expired') return '试用已结束。购买或输入授权码后即可继续使用，设置和待处理内容都已保留。';
-  if (!license.trialStarted) return `首次成功执行动作后开始 ${TRIAL_MS / DAY} 天完整试用。`;
+  if (license.state === 'licensed') return t('options.license.licensed');
+  if (license.state === 'revoked') return t('options.license.revoked');
+  if (license.state === 'expired') return t('options.license.expired');
+  if (!license.trialStarted) return t('options.license.notStarted', { count: TRIAL_MS / DAY });
   const days = Math.max(1, Math.ceil(((license.trialEndsAt ?? 0) - Date.now()) / DAY));
-  return `试用中，还剩 ${days} 天（到 ${new Date(license.trialEndsAt ?? 0).toLocaleDateString()}）。`;
+  const date = new Date(license.trialEndsAt ?? 0).toLocaleDateString((LOCALE_TAGS as Record<string, string>)[getLocale()]);
+  return t('options.license.trial', { count: days, date });
 }
 
 export function LicenseSection({ show }: { show: (message: string, kind?: 'info' | 'error') => void }) {
@@ -34,9 +36,9 @@ export function LicenseSection({ show }: { show: (message: string, kind?: 'info'
     try {
       const result = await api.collectLicense();
       setLicense(result.license);
-      if (result.status === 'activated') { setJustCollected(true); show('付款已确认，授权已激活。'); }
-      else if (result.status === 'revoked') show('这笔付款已退款或被撤销。', 'error');
-      else if (manual && result.status === 'pending') show('还没有收到付款确认，通常需要几秒到几分钟。');
+      if (result.status === 'activated') { setJustCollected(true); show(t('options.license.paymentConfirmed')); }
+      else if (result.status === 'revoked') show(t('options.license.paymentRevoked'), 'error');
+      else if (manual && result.status === 'pending') show(t('options.license.paymentPending'));
     } catch (error) {
       if (manual) show((error as Error).message, 'error');
     } finally { collecting.current = false; }
@@ -82,11 +84,11 @@ export function LicenseSection({ show }: { show: (message: string, kind?: 'info'
   const activate = () => run(async () => {
     setLicense(await api.activateLicense(input));
     setInput('');
-    show('授权已激活。');
+    show(t('options.license.activated'));
   });
-  const copyKey = (key: string) => run(async () => { await navigator.clipboard.writeText(key); show('已复制授权码。'); });
+  const copyKey = (key: string) => run(async () => { await navigator.clipboard.writeText(key); show(t('options.license.copied')); });
   const downloadKey = (key: string) => {
-    const url = URL.createObjectURL(new Blob([`飛雷神 Hiraishin 授权码\n\n${key}\n\n重装或换电脑时，在设置页输入此授权码即可恢复。\n`], { type: 'text/plain' }));
+    const url = URL.createObjectURL(new Blob([t('options.license.backupFile', { key })], { type: 'text/plain' }));
     const link = Object.assign(document.createElement('a'), { href: url, download: 'hiraishin-license.txt' });
     link.click();
     URL.revokeObjectURL(url);
@@ -95,31 +97,31 @@ export function LicenseSection({ show }: { show: (message: string, kind?: 'info'
   if (!license) return null;
   const canBuy = license.state !== 'licensed' && license.configured;
   return <section className="license" aria-labelledby="license-heading" data-state={license.state}>
-    <h2 id="license-heading">授权</h2>
+    <h2 id="license-heading">{t('options.license.heading')}</h2>
     <p className="license-summary">{summary(license)}</p>
 
     {license.licenseKey && <div className={justCollected ? 'license-key fresh' : 'license-key'}>
-      {justCollected && <strong>请保存你的授权码，重装或换电脑时用它恢复：</strong>}
+      {justCollected && <strong>{t('options.license.saveKey')}</strong>}
       <code>{license.licenseKey}</code>
-      <button type="button" className="button small" disabled={busy} onClick={() => copyKey(license.licenseKey!)}>复制</button>
-      <button type="button" className="button subtle small" onClick={() => downloadKey(license.licenseKey!)}>下载备份</button>
+      <button type="button" className="button small" disabled={busy} onClick={() => copyKey(license.licenseKey!)}>{t('options.license.copy')}</button>
+      <button type="button" className="button subtle small" onClick={() => downloadKey(license.licenseKey!)}>{t('options.license.download')}</button>
     </div>}
 
     {license.state !== 'licensed' && <>
       {pending && <p className="license-pending" role="status">
-        等待付款确认…
-        <button type="button" className="link" disabled={busy} onClick={() => void collect(true)}>我已付款，重新检查</button>
+        {t('options.license.pending')}
+        <button type="button" className="link" disabled={busy} onClick={() => void collect(true)}>{t('options.license.recheck')}</button>
       </p>}
       <div className="license-actions">
-        {canBuy && <button type="button" className="button" disabled={busy} onClick={() => void purchase()}>一次性购买</button>}
-        {!license.configured && <span className="muted">购买服务即将开放。</span>}
+        {canBuy && <button type="button" className="button" disabled={busy} onClick={() => void purchase()}>{t('options.license.buy')}</button>}
+        {!license.configured && <span className="muted">{t('options.license.comingSoon')}</span>}
       </div>
       <form className="license-activate" onSubmit={event => { event.preventDefault(); if (input.trim()) void activate(); }}>
-        <label className="field"><span>已有授权码</span>
+        <label className="field"><span>{t('options.license.haveKey')}</span>
           <input value={input} onChange={event => setInput(event.target.value)} placeholder="MK-XXXXX-XXXXX-XXXXX-XXXXX-XXXXX"
             autoComplete="off" spellCheck={false} disabled={!license.configured} />
         </label>
-        <button type="submit" className="button" disabled={busy || !input.trim() || !license.configured}>激活</button>
+        <button type="submit" className="button" disabled={busy || !input.trim() || !license.configured}>{t('options.license.activate')}</button>
       </form>
     </>}
   </section>;

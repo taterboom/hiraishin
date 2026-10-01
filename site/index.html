@@ -1,15 +1,22 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hiraishin 飛雷神 · Chrome 轮盘 · 切换标签、整理页面、发送选区</title>
-<meta name="description" content="Hiraishin 是一个 Chrome 扩展：按住 Option / Alt 甩动轮盘，快速切换、整理和复制标签页，把选中文字发送到 ChatGPT / Claude。支持自定义分区与快捷键。">
-<meta name="keywords" content="Chrome extension, tab history back forward, close tabs to the right shortcut, duplicate tab shortcut, send selection to ChatGPT, send text to Claude, Ctrl+- shortcut, tab manager, Hiraishin, 飛雷神">
+<title>Hiraishin 飛雷神 · A radial wheel for Chrome · Switch tabs, tidy up, send selections</title>
+<meta name="description" content="Hiraishin is a Chrome extension: hold Option / Alt and flick a radial wheel to switch, tidy and copy tabs, and send selected text to ChatGPT / Claude. Customizable sectors and shortcuts.">
+<meta name="keywords" content="Chrome extension, tab history back forward, close tabs to the right shortcut, duplicate tab shortcut, send selection to ChatGPT, send text to Claude, Ctrl+- shortcut, tab manager, radial menu, Hiraishin, 飛雷神">
 <link rel="canonical" href="https://hiraishin.44san.com/">
+<link rel="alternate" hreflang="en" href="https://hiraishin.44san.com/">
+<link rel="alternate" hreflang="zh-CN" href="https://hiraishin.44san.com/zh/">
+<link rel="alternate" hreflang="ja" href="https://hiraishin.44san.com/ja/">
+<link rel="alternate" hreflang="x-default" href="https://hiraishin.44san.com/">
 <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Hiraishin · 快速操作浏览器的轮盘">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="zh_CN">
+<meta property="og:locale:alternate" content="ja_JP">
+<meta property="og:title" content="Hiraishin · A wheel for driving your browser fast">
 <meta property="og:description" content="Tab history back/forward, tab tidying, and send-selection-to-ChatGPT/Claude for Chrome.">
 <meta property="og:url" content="https://hiraishin.44san.com/">
 <meta name="twitter:card" content="summary">
@@ -19,15 +26,24 @@
   "@context": "https://schema.org",
   "@graph": [
     {
+      "@type": "WebPage",
+      "@id": "https://hiraishin.44san.com/#webpage",
+      "url": "https://hiraishin.44san.com/",
+      "name": "Hiraishin 飛雷神 · A radial wheel for Chrome · Switch tabs, tidy up, send selections",
+      "inLanguage": "en",
+      "about": { "@id": "https://hiraishin.44san.com/#app" }
+    },
+    {
       "@type": "SoftwareApplication",
+      "@id": "https://hiraishin.44san.com/#app",
       "name": "Hiraishin",
       "alternateName": "飛雷神",
       "applicationCategory": "BrowserApplication",
       "operatingSystem": "Chrome 121+",
+      "inLanguage": ["en", "zh-CN", "ja"],
       "description": "Chrome extension for tab history back/forward, tab tidying (close right, duplicate, move to new window) and sending selected text to ChatGPT or Claude with one shortcut.",
       "url": "https://hiraishin.44san.com/",
       "author": { "@type": "Person", "name": "taterboom", "url": "https://github.com/taterboom" },
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
       "featureList": [
         "Tab access history back and forward, per window",
         "Switch to the previous tab",
@@ -35,26 +51,29 @@
         "Copy tab links as plain text or Markdown",
         "Go to or send selected text to ChatGPT or Claude (leftmost matching tab in the current window)",
         "Custom target websites with URL rules and input selectors",
-        "Browser shortcuts plus in-page shortcuts such as Ctrl+-"
+        "Browser shortcuts plus in-page shortcuts such as Ctrl+-",
+        "Interface in English, Simplified Chinese and Japanese"
       ]
     },
     {
       "@type": "FAQPage",
+      "inLanguage": "en",
       "mainEntity": [
-        { "@type": "Question", "name": "Hiraishin 的标签历史和浏览器的后退有什么区别？", "acceptedAnswer": { "@type": "Answer", "text": "浏览器后退在同一个标签页里回到上一个网址；Hiraishin 记录的是你在标签页之间的切换轨迹，每个窗口独立，后退会切回上一个激活过的标签页，就像 VS Code 的位置历史。" } },
-        { "@type": "Question", "name": "怎样用快捷键关闭当前标签右侧的所有标签？", "acceptedAnswer": { "@type": "Answer", "text": "安装 Hiraishin 后，在 chrome://extensions/shortcuts 给“关闭右侧标签页”命令绑定任意组合键。固定标签和其他窗口不受影响。" } },
-        { "@type": "Question", "name": "如何把网页上选中的文字直接发送给 ChatGPT 或 Claude？", "acceptedAnswer": { "@type": "Answer", "text": "选中文字后通过轮盘、快捷键或右键菜单发送。Hiraishin 会切换到当前窗口最左侧的 ChatGPT / Claude 对话页（没有则新建），填入文字并发送；如果输入框已有草稿，它会停下并提示，不会覆盖。" } },
-        { "@type": "Question", "name": "Chrome 扩展快捷键不支持减号，Hiraishin 怎么支持 Ctrl+-？", "acceptedAnswer": { "@type": "Answer", "text": "Hiraishin 在你授权的网页里监听按键，作为“网页快捷键”补充 Chrome 原生快捷键。地址栏和 Chrome 内部页面仍需使用原生快捷键或面板。" } },
-        { "@type": "Question", "name": "Hiraishin 会上传我的浏览数据吗？", "acceptedAnswer": { "@type": "Answer", "text": "不会。设置和访问轨迹只保存在本机；只有在你主动填入或发送时，选中的文字才会交给你选择的 AI 网站。" } }
+        { "@type": "Question", "name": "How is Hiraishin's tab history different from the browser's Back button?", "acceptedAnswer": { "@type": "Answer", "text": "The browser's Back button returns to the previous URL within the same tab. Hiraishin records the trail of tabs you switch between, separately for each window, and going back switches to the tab you had active before, much like location history in VS Code." } },
+        { "@type": "Question", "name": "How do I close all tabs to the right of the current tab with a shortcut?", "acceptedAnswer": { "@type": "Answer", "text": "After installing Hiraishin, open chrome://extensions/shortcuts and assign any key combination to the \"Close tabs to the right\" command. Pinned tabs and other windows are not affected." } },
+        { "@type": "Question", "name": "How do I send selected text on a web page straight to ChatGPT or Claude?", "acceptedAnswer": { "@type": "Answer", "text": "Select the text, then send it from the wheel, a shortcut or the right-click menu. Hiraishin switches to the leftmost ChatGPT / Claude chat tab in the current window (or opens one), fills in the text and sends it. If the input box already contains a draft, it stops and tells you instead of overwriting it." } },
+        { "@type": "Question", "name": "Chrome extension shortcuts can't use the minus key. How does Hiraishin support Ctrl+-?", "acceptedAnswer": { "@type": "Answer", "text": "On sites you have granted access to, Hiraishin listens for key presses itself as \"in-page shortcuts\", complementing Chrome's native shortcuts. In the address bar and on Chrome's internal pages, use native shortcuts or the toolbar wheel." } },
+        { "@type": "Question", "name": "Does Hiraishin upload my browsing data?", "acceptedAnswer": { "@type": "Answer", "text": "No. Settings and your tab trail stay on your device. Selected text is handed to the AI website you chose only when you explicitly fill or send it." } }
       ]
     },
     {
       "@type": "HowTo",
-      "name": "把选中文字发送到 Claude",
+      "name": "Send selected text to Claude",
+      "inLanguage": "en",
       "step": [
-        { "@type": "HowToStep", "text": "在任意网页选中要处理的文字。" },
-        { "@type": "HowToStep", "text": "按“发送到 Claude”的快捷键，或右键选择“飛雷神 → 发送到 Claude”。" },
-        { "@type": "HowToStep", "text": "Hiraishin 切换到当前窗口最左侧的 Claude 对话页，填入并发送；开启“发送后返回来源页”可自动回到原文。" }
+        { "@type": "HowToStep", "text": "Select the text you want to work with on any web page." },
+        { "@type": "HowToStep", "text": "Press your \"Send to Claude\" shortcut, or right-click and choose \"Hiraishin → Send to Claude\"." },
+        { "@type": "HowToStep", "text": "Hiraishin switches to the leftmost Claude chat tab in the current window, fills in the text and sends it. Turn on \"Return to the source page after sending\" to jump back to where you were." }
       ]
     }
   ]
@@ -64,6 +83,10 @@
   :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif; color: #292d25; background: #f7f6f0; line-height: 1.6; }
   body { margin: 0; }
   main { max-width: 820px; margin: 0 auto; padding: 48px 24px 80px; }
+  .lang { margin: -24px 0 24px; text-align: right; font-size: 13px; color: #777b70; }
+  .lang a { color: #566645; text-decoration: none; }
+  .lang a:hover { text-decoration: underline; }
+  .lang [aria-current] { color: #292d25; font-weight: 600; }
   h1 { font-size: 34px; letter-spacing: 1px; margin: 0 0 8px; }
   h1 span { display: block; font-size: 14px; letter-spacing: 2px; color: #566645; }
   .tagline { font-size: 18px; color: #4a5142; margin: 0 0 24px; }
@@ -84,57 +107,57 @@
 </head>
 <body>
 <main>
-  <h1>Hiraishin<span>飛雷神 · CHROME 扩展</span></h1>
-  <p class="tagline">按住 Option / Alt，甩动、松开。<br>用轮盘切换标签、整理页面，把选中文字发给 AI。</p>
-  <p><a class="cta" href="#install">安装与开始使用</a><a class="cta secondary" href="privacy.html">隐私说明</a></p>
-  <p><em>Hiraishin: tab history back/forward, tab tidying, and send-selection-to-ChatGPT/Claude for Chrome. Free at launch; runs locally.</em></p>
+  <nav class="lang" aria-label="Language"><span aria-current="page">English</span> · <a href="zh/" hreflang="zh-CN" lang="zh-CN">简体中文</a> · <a href="ja/" hreflang="ja" lang="ja">日本語</a></nav>
+  <h1>Hiraishin<span>飛雷神 · CHROME EXTENSION</span></h1>
+  <p class="tagline">Hold Option / Alt, flick, release.<br>Use the wheel to switch tabs, tidy up pages and send selected text to AI.</p>
+  <p><a class="cta" href="#install">Install and get started</a><a class="cta secondary" href="privacy">Privacy</a></p>
 
-  <h2>先用上轮盘</h2>
-  <section class="feature"><h3>按住、甩动、松开</h3><p>在设置中允许网页访问后，macOS 按住 Option，Windows / Linux 按住 Alt，再甩动鼠标选择动作，松开执行。只按住不动不会弹出，圆心松手不执行；Esc 或右键取消。</p></section>
-  <section class="feature"><h3>你的方向，你的动作</h3><p>4 / 6 / 8 / 12 等分自由配置，每一瓣可以放入动作或留空。点击工具栏图标也能打开同一套轮盘，用鼠标点击执行。轮盘上的批量关闭会先确认数量，再执行。</p></section>
-  <h2>它解决什么问题</h2>
+  <h2>Start with the wheel</h2>
+  <section class="feature"><h3>Hold, flick, release</h3><p>Once you allow site access in Settings, hold Option on macOS or Alt on Windows / Linux, flick the mouse toward an action and release to run it. Holding the key without moving shows nothing, and releasing in the center does nothing; press Esc or right-click to cancel.</p></section>
+  <section class="feature"><h3>Your directions, your actions</h3><p>Split the wheel into 4, 6, 8 or 12 sectors and put an action in each one or leave it empty. Clicking the toolbar icon opens the same wheel, where you click an action to run it. Bulk closing from the wheel shows how many tabs will close and asks you to confirm first.</p></section>
+  <h2>What it solves</h2>
   <section class="feature">
-    <h3>“刚才那个页面在哪？” → 标签访问历史后退 / 前进</h3>
-    <p>每个窗口独立记录你实际切换过的标签页，像 VS Code 的位置历史一样后退、前进。默认 <kbd>Ctrl+,</kbd> / <kbd>Ctrl+.</kbd>，也可用 <kbd>Ctrl+-</kbd> / <kbd>Ctrl+Shift+-</kbd> 作为网页快捷键。后退后手动打开新标签会截断前进分支；到达边界时停留。</p>
+    <h3>“Where was that page I just had?” → Tab history back / forward</h3>
+    <p>Each window keeps its own record of the tabs you actually switched to, so you can go back and forward like location history in VS Code. The defaults are <kbd>Ctrl+,</kbd> / <kbd>Ctrl+.</kbd>, and <kbd>Ctrl+-</kbd> / <kbd>Ctrl+Shift+-</kbd> also work as in-page shortcuts. Opening a new tab by hand after going back cuts off the forward branch; at either end it stays put.</p>
   </section>
   <section class="feature">
-    <h3>“这部分工作结束了” → 关闭右侧标签、移到新窗口</h3>
-    <p>以当前标签为锚点关闭右侧所有未固定标签；把当前标签、当前及左侧或右侧标签一起移到新窗口，标签组的名称和颜色会一并带过去。</p>
+    <h3>“I'm done with this part of the work” → Close tabs to the right, move to a new window</h3>
+    <p>Close every unpinned tab to the right of the current one; move the current tab, or the current tab together with the tabs to its left or right, to a new window, keeping tab group names and colors.</p>
   </section>
   <section class="feature">
-    <h3>“这个动作每次都很麻烦” → 复制标签、移动标签、复制链接</h3>
-    <p>复制标签页、左移 / 右移 / 移到最左最右、复制一个或多个标签的链接（纯文本或 Markdown），全部可绑定快捷键。</p>
+    <h3>“This takes too many clicks every time” → Duplicate, move and copy links</h3>
+    <p>Duplicate a tab, move it left / right / to the start or end, and copy the links of one or more tabs as plain text or Markdown. Every action can have a shortcut.</p>
   </section>
   <section class="feature">
-    <h3>“查到一段内容，想立刻交给 AI” → 填入或发送到 ChatGPT / Claude</h3>
-    <p>选中文字，通过轮盘、快捷键或右键，Hiraishin 切换到当前窗口最左侧的对话页（没有则在旁边新建），填入并发送。已有草稿时不会覆盖；未登录、正在生成、无法确认提交时都会明确告诉你。可选“发送后返回来源页”。可配置兼容网站作为自定义目标，需要正确的地址规则和页面选择器。</p>
+    <h3>“I found something and want AI on it now” → Fill or send to ChatGPT / Claude</h3>
+    <p>Select text and use the wheel, a shortcut or the right-click menu: Hiraishin switches to the leftmost chat tab in the current window (or opens one next to your tab), fills in the text and sends it. An existing draft is never overwritten, and you are told clearly when you are signed out, a reply is still generating, or the submission can't be confirmed. Optionally return to the source page after sending. Compatible websites can be added as custom targets; they need a correct URL rule and page selectors.</p>
   </section>
 
-  <h2>动作一览</h2>
+  <h2>All actions</h2>
   <table>
-    <thead><tr><th>分类</th><th>动作</th></tr></thead>
+    <thead><tr><th>Category</th><th>Actions</th></tr></thead>
     <tbody>
-      <tr><td>穿梭</td><td>访问历史后退 / 前进 · 切回上一 Tab</td></tr>
-      <tr><td>整理</td><td>关闭右侧标签页 · 左移 / 右移 / 最左 / 最右 · 当前 / 含左侧 / 含右侧移到新窗口</td></tr>
-      <tr><td>复制与带走</td><td>复制标签页 · 复制链接 · 复制为 Markdown</td></tr>
-      <tr><td>AI 目标</td><td>前往 / 发送到 ChatGPT、Claude、默认目标；自定义目标按能力支持前往、填入或发送</td></tr>
+      <tr><td>Navigate</td><td>Tab history back / forward · Previous tab</td></tr>
+      <tr><td>Arrange</td><td>Close tabs to the right · Move tab left / right / to start / to end · Move current tab, or it with the tabs to its left / right, to a new window</td></tr>
+      <tr><td>Duplicate and take away</td><td>Duplicate tab · Copy links · Copy as Markdown links</td></tr>
+      <tr><td>AI targets</td><td>Go to / Send to ChatGPT, Claude or the default target; custom targets support go to, fill or send depending on their capability</td></tr>
     </tbody>
   </table>
-  <p>完整命令清单（机器可读）：<a href="actions.json">actions.json</a>；面向大模型的说明：<a href="llms.txt">llms.txt</a>。</p>
+  <p>Full command list (machine-readable): <a href="actions.json">actions.json</a>. Notes for large language models: <a href="llms.txt">llms.txt</a>.</p>
 
-  <h2>常见问题</h2>
-  <details><summary>Hiraishin 的标签历史和浏览器的后退有什么区别？</summary><p>浏览器后退在同一个标签页里回到上一个网址；Hiraishin 记录的是你在标签页之间的切换轨迹，每个窗口独立，后退会切回上一个激活过的标签页。</p></details>
-  <details><summary>怎样用快捷键关闭当前标签右侧的所有标签？</summary><p>在 chrome://extensions/shortcuts 给“关闭右侧标签页”绑定任意组合键。固定标签和其他窗口不受影响。</p></details>
-  <details><summary>如何把网页上选中的文字直接发送给 ChatGPT 或 Claude？</summary><p>选中文字后通过轮盘、快捷键或右键菜单发送。目标是当前窗口最左侧的对话页，没有则新建。输入框已有草稿时会停下并提示。</p></details>
-  <details><summary>Chrome 扩展快捷键不支持减号，怎么支持 Ctrl+-？</summary><p>Hiraishin 在你授权的网页里监听按键作为“网页快捷键”；地址栏和 Chrome 内部页面仍用原生快捷键或面板。</p></details>
-  <details><summary>会上传我的浏览数据吗？</summary><p>不会。设置和轨迹只在本机；只有你主动填入或发送时，选中的文字才会交给你选择的 AI 网站。</p></details>
-  <details><summary>收费吗？</summary><p>当前版本免费使用，自定义目标不设数量限制。不包含订阅、云同步或提示词模板。</p></details>
+  <h2>FAQ</h2>
+  <details><summary>How is Hiraishin's tab history different from the browser's Back button?</summary><p>The browser's Back button returns to the previous URL within the same tab. Hiraishin records the trail of tabs you switch between, separately for each window, and going back switches to the tab you had active before.</p></details>
+  <details><summary>How do I close all tabs to the right of the current tab with a shortcut?</summary><p>Open chrome://extensions/shortcuts and assign any key combination to “Close tabs to the right”. Pinned tabs and other windows are not affected.</p></details>
+  <details><summary>How do I send selected text on a web page straight to ChatGPT or Claude?</summary><p>Select the text, then send it from the wheel, a shortcut or the right-click menu. The target is the leftmost chat tab in the current window, or a new one if there is none. If the input box already has a draft, Hiraishin stops and tells you.</p></details>
+  <details><summary>Chrome extension shortcuts can't use the minus key. How is Ctrl+- supported?</summary><p>On sites you have granted access to, Hiraishin listens for the keys itself as “in-page shortcuts”. In the address bar and on Chrome's internal pages, use native shortcuts or the toolbar wheel.</p></details>
+  <details><summary>Does it upload my browsing data?</summary><p>No. Settings and your tab trail stay on your device. Selected text goes to the AI website you chose only when you explicitly fill or send it.</p></details>
+  <details><summary>Does it cost anything?</summary><p>Every feature is free to try for 14 days, starting the first time an action runs successfully. After the trial, a one-time purchase keeps it working; there is no subscription. Your settings and pending selections are kept when the trial ends.</p></details>
 
-  <h2 id="install">安装与开始使用</h2>
-  <p>当前为发布候选版本，Chrome 网上应用店链接将在上架后提供。已取得开发者提供的安装包时：解压 ZIP → 打开 chrome://extensions → 开启开发者模式 → 加载已解压的文件夹。</p>
-  <p>固定工具栏图标，先试着点击轮盘。进入设置允许网页访问后，即可使用网页手势。网页轮盘不适用于 Chrome 内部页、网上应用店等受限页面；发送到 AI 需要相应网站权限与已登录账号，网站界面变化可能影响适配。</p>
+  <h2 id="install">Install and get started</h2>
+  <p>This is a release candidate; the Chrome Web Store link will be added once it is published. If you have an install package from the developer: unzip it → open chrome://extensions → turn on Developer mode → load the unpacked folder.</p>
+  <p>Pin the toolbar icon and try clicking the wheel first. After allowing site access in Settings, you can use gestures on web pages. The in-page wheel does not work on restricted pages such as Chrome's internal pages or the Chrome Web Store. Sending to AI requires access to that website and a signed-in account, and changes to the website's interface may affect compatibility.</p>
   <footer>
-    <p>Hiraishin（飛雷神）由 <a href="https://github.com/taterboom">taterboom</a> 开发。<a href="privacy.html">隐私与数据说明</a>。需要 Chrome 121 或更新版本。</p>
+    <p>Hiraishin (飛雷神) is made by <a href="https://github.com/taterboom">taterboom</a>. <a href="privacy">Privacy and data</a>. Requires Chrome 121 or later.</p>
   </footer>
 </main>
 </body>

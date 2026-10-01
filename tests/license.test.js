@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createController, LOCKED_MESSAGE, SETTINGS_KEY } from '../src/controller.js';
+import { createController, lockedMessage, SETTINGS_KEY } from '../src/controller.js';
 import { LICENSE_KEY, SYNC_KEY, REFRESH_ALARM, TRIAL_MS, OFFLINE_GRACE_MS, REFRESH_MS } from '../src/license.js';
 import { USAGE_KEY } from '../src/usage.js';
 import { createFakeChrome, tab } from './fake-chrome.js';
@@ -22,13 +22,14 @@ async function signToken(payload, privateKey = pair.privateKey) {
 
 /** Fake Menkyo: `mode` simulates outages; `paid` controls whether the purchase has been confirmed. */
 function fakeMenkyo(clock) {
-  const server = { mode: 'up', paid: false, revoked: false, credential: 'cred-1', calls: [] };
+  const server = { mode: 'up', paid: false, revoked: false, credential: 'cred-1', calls: [], bodies: [] };
   const token = async () => signToken({ iss: 'menkyo', bk: 'hiraishin', sub: 'hash', iat: Math.floor(clock.now / 1000), exp: Math.floor(clock.now / 1000) + 30 * 24 * 3600 });
   const reply = (status, body = {}) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
   server.fetch = async (url, init) => {
     const path = new URL(url).pathname;
     const body = JSON.parse(init.body);
     server.calls.push(path);
+    server.bodies.push(body);
     if (server.mode === 'offline') throw new TypeError('Failed to fetch');
     if (server.mode === 'down') return reply(503);
     if (path === '/purchase') return reply(200, { claim_credential: server.credential, purchase_url: 'https://buy.stripe.com/test?client_reference_id=abc' });
@@ -80,7 +81,7 @@ test('an expired trial refuses every path that performs an operation, and counts
   await env.controller.onActivated({ tabId: 1, windowId: 1 });
   // Startup injects content scripts into open pages; only what happens after this point matters.
   const before = { tabs: structuredClone(env.data.tabs), updates: env.data.updates.length, executed: env.data.executed.length };
-  const locked = new RegExp(LOCKED_MESSAGE.slice(0, 5));
+  const locked = new RegExp(lockedMessage().slice(0, 5));
 
   // runAction entries return a refusal; command, web and overlay entries also notify.
   assert.equal((await env.controller.onCommand('duplicate-tab', { id: 1, windowId: 1 })).status, 'license-required');
@@ -145,6 +146,8 @@ test('purchase stores a claim credential, waits for payment, then collects and a
   await env.controller.ready();
   await env.message('start-purchase');
   assert.equal(env.data.created.at(-1).url, 'https://buy.stripe.com/test?client_reference_id=abc');
+  assert.deepEqual(env.server.bodies[env.server.calls.lastIndexOf('/purchase')], { business_key: 'hiraishin', locale: 'zh' },
+    'the checkout follows the interface language');
   assert.equal(env.stored().credential, 'cred-1');
   assert.equal(env.data.sync[SYNC_KEY].credential, 'cred-1', 'mirrored for recovery after reinstall');
 

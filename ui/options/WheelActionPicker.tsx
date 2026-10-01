@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { CATEGORIES } from '../../src/actions.js';
+import { categoryName } from '../../src/actions.js';
+import { t } from '../../src/i18n.js';
 import { ActionIcon } from '../popup/icons';
 import type { ActionInfo } from '../shared/types';
 import { WheelPositions } from './WheelPositions';
@@ -36,7 +37,7 @@ export function WheelActionPicker({ actions, value, slots, onChange }: {
     if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false);
   }}>
     <button type="button" className="action-picker-trigger" ref={trigger} data-value={value ?? ''}
-      aria-label={`分区动作：${selected?.name ?? '留空，不执行动作'}`} aria-haspopup="dialog" aria-expanded={open}
+      aria-label={t('options.picker.aria', { name: selected?.name ?? t('options.picker.empty') })} aria-haspopup="dialog" aria-expanded={open}
       onClick={() => {
         if (!open) {
           const rect = trigger.current!.getBoundingClientRect();
@@ -46,10 +47,10 @@ export function WheelActionPicker({ actions, value, slots, onChange }: {
         setOpen(!open);
       }}>
       {selected ? <ActionIcon action={selected} /> : <span className="empty-action-icon" aria-hidden="true">—</span>}
-      <span className="picker-name">{selected?.name ?? '留空，不执行动作'}</span>
+      <span className="picker-name">{selected?.name ?? t('options.picker.empty')}</span>
       <svg className="picker-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg>
     </button>
-    {open && <div className="action-picker-panel" data-above={above} role="dialog" aria-label="选择分区动作"
+    {open && <div className="action-picker-panel" data-above={above} role="dialog" aria-label={t('options.picker.dialog')}
       onKeyDown={event => {
         if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); close(); }
         if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
@@ -62,15 +63,15 @@ export function WheelActionPicker({ actions, value, slots, onChange }: {
           : (current + (event.key === 'ArrowUp' ? -1 : 1) + items.length) % items.length;
         event.preventDefault(); items[next].focus();
       }}>
-      <input ref={search} className="action-picker-search" type="search" placeholder="搜索动作…" aria-label="搜索分区动作"
+      <input ref={search} className="action-picker-search" type="search" placeholder={t('options.picker.search')} aria-label={t('options.picker.searchAria')}
         value={query} onChange={event => setQuery(event.target.value)} />
       <div className="action-picker-list">
         {!term && <button type="button" className="action-choice" data-value="" aria-pressed={!value} onClick={() => choose(null)}>
-          <span className="empty-action-icon" aria-hidden="true">—</span><span className="picker-name">留空，不执行动作</span>
+          <span className="empty-action-icon" aria-hidden="true">—</span><span className="picker-name">{t('options.picker.empty')}</span>
           {!value && <span className="picker-check" aria-hidden="true">✓</span>}
         </button>}
-        {[...groups].map(([category, choices]) => <div key={category} role="group" aria-label={(CATEGORIES as Record<string, string>)[category] ?? category}>
-          <div className="picker-category">{(CATEGORIES as Record<string, string>)[category] ?? category}</div>
+        {[...groups].map(([category, choices]) => <div key={category} role="group" aria-label={categoryName(category)}>
+          <div className="picker-category">{categoryName(category)}</div>
           {choices.map(action => <button type="button" className="action-choice" key={action.id} data-value={action.id}
             aria-pressed={action.id === value} onClick={() => choose(action.id)}>
             <ActionIcon action={action} />
@@ -78,7 +79,7 @@ export function WheelActionPicker({ actions, value, slots, onChange }: {
             {action.id === value && <span className="picker-check" aria-hidden="true">✓</span>}
           </button>)}
         </div>)}
-        {term && !groups.size && <p className="picker-empty" role="status">没有匹配的动作</p>}
+        {term && !groups.size && <p className="picker-empty" role="status">{t('options.picker.noMatch')}</p>}
       </div>
     </div>}
   </div>;

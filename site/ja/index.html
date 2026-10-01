@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hiraishin 飛雷神 · Chrome 用ホイール · タブ切り替え・整理・選択テキスト送信</title>
+<meta name="description" content="Hiraishin は Chrome 拡張機能です。Option / Alt を押しながらマウスを振ってホイールを開き、タブの切り替え・整理・コピー、選択テキストの ChatGPT / Claude への送信をすばやく行えます。セクターとショートカットは自由に設定できます。">
+<meta name="keywords" content="Chrome 拡張機能, タブ履歴 戻る 進む, 右側のタブを閉じる ショートカット, タブを複製 ショートカット, 選択テキストを ChatGPT に送信, Claude に送信, Ctrl+- ショートカット, タブ管理, Hiraishin, 飛雷神">
+<link rel="canonical" href="https://hiraishin.44san.com/ja/">
+<link rel="alternate" hreflang="en" href="https://hiraishin.44san.com/">
+<link rel="alternate" hreflang="zh-CN" href="https://hiraishin.44san.com/zh/">
+<link rel="alternate" hreflang="ja" href="https://hiraishin.44san.com/ja/">
+<link rel="alternate" hreflang="x-default" href="https://hiraishin.44san.com/">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="zh_CN">
+<meta property="og:title" content="Hiraishin · ブラウザをすばやく操作するホイール">
+<meta property="og:description" content="Chrome のタブ履歴を戻る / 進む、タブを整理、選択テキストを ChatGPT / Claude に送信。">
+<meta property="og:url" content="https://hiraishin.44san.com/ja/">
+<meta name="twitter:card" content="summary">
+<link rel="alternate" type="application/json" href="../actions.json" title="Hiraishin actions (machine-readable)">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://hiraishin.44san.com/ja/#webpage",
+      "url": "https://hiraishin.44san.com/ja/",
+      "name": "Hiraishin 飛雷神 · Chrome 用ホイール · タブ切り替え・整理・選択テキスト送信",
+      "inLanguage": "ja",
+      "about": { "@id": "https://hiraishin.44san.com/#app" }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://hiraishin.44san.com/#app",
+      "name": "Hiraishin",
+      "alternateName": "飛雷神",
+      "applicationCategory": "BrowserApplication",
+      "operatingSystem": "Chrome 121+",
+      "inLanguage": ["en", "zh-CN", "ja"],
+      "description": "タブ履歴の戻る / 進む、タブの整理（右側を閉じる、複製、新しいウィンドウへ移動）、選択テキストをショートカット一つで ChatGPT や Claude に送信できる Chrome 拡張機能です。",
+      "url": "https://hiraishin.44san.com/",
+      "author": { "@type": "Person", "name": "taterboom", "url": "https://github.com/taterboom" },
+      "featureList": [
+        "ウィンドウごとのタブ履歴を戻る / 進む",
+        "直前のタブに切り替え",
+        "右側のタブを閉じる、タブを複製、タブを左 / 右 / 先頭 / 末尾へ移動、新しいウィンドウへ移動",
+        "タブのリンクをプレーンテキストまたは Markdown でコピー",
+        "ChatGPT / Claude を開く、または選択テキストを送信（現在のウィンドウで一番左にある該当タブ）",
+        "URL ルールと入力欄セレクターを指定したカスタム送信先",
+        "ブラウザのショートカットと、Ctrl+- などのページ内ショートカット",
+        "日本語・英語・簡体字中国語の画面表示"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "inLanguage": "ja",
+      "mainEntity": [
+        { "@type": "Question", "name": "Hiraishin のタブ履歴とブラウザの「戻る」は何が違いますか？", "acceptedAnswer": { "@type": "Answer", "text": "ブラウザの「戻る」は同じタブの中で前の URL に戻ります。Hiraishin はタブ間の切り替えの軌跡をウィンドウごとに記録し、「戻る」で直前にアクティブだったタブに切り替えます。VS Code の移動履歴のようなものです。" } },
+        { "@type": "Question", "name": "現在のタブより右のタブをショートカットでまとめて閉じるには？", "acceptedAnswer": { "@type": "Answer", "text": "Hiraishin をインストールしたら、chrome://extensions/shortcuts で「右側のタブを閉じる」コマンドに好きなキーの組み合わせを割り当てます。固定したタブや他のウィンドウには影響しません。" } },
+        { "@type": "Question", "name": "ページで選択したテキストを ChatGPT や Claude に直接送るには？", "acceptedAnswer": { "@type": "Answer", "text": "テキストを選択し、ホイール、ショートカット、または右クリックメニューから送信します。Hiraishin は現在のウィンドウで一番左にある ChatGPT / Claude のチャットタブに切り替え（なければ新しく開き）、テキストを入力して送信します。入力欄に下書きがある場合は上書きせず、止まってお知らせします。" } },
+        { "@type": "Question", "name": "Chrome 拡張機能のショートカットはマイナスキーに対応していません。Hiraishin はどうやって Ctrl+- を使えるようにしているのですか？", "acceptedAnswer": { "@type": "Answer", "text": "アクセスを許可したサイトで Hiraishin 自身がキー入力を受け取り、「ページ内ショートカット」として Chrome のネイティブショートカットを補います。アドレスバーや Chrome の内部ページでは、ネイティブショートカットかツールバーのホイールを使ってください。" } },
+        { "@type": "Question", "name": "Hiraishin は閲覧データをアップロードしますか？", "acceptedAnswer": { "@type": "Answer", "text": "いいえ。設定とタブ履歴はお使いの端末にのみ保存されます。選択テキストは、あなたが入力や送信を実行したときにだけ、選んだ AI サイトに渡されます。" } }
+      ]
+    },
+    {
+      "@type": "HowTo",
+      "name": "選択テキストを Claude に送信する",
+      "inLanguage": "ja",
+      "step": [
+        { "@type": "HowToStep", "text": "任意のページで、使いたいテキストを選択します。" },
+        { "@type": "HowToStep", "text": "「Claude に送信」のショートカットを押すか、右クリックして「飛雷神 → Claude に送信」を選びます。" },
+        { "@type": "HowToStep", "text": "Hiraishin が現在のウィンドウで一番左にある Claude のチャットタブに切り替え、入力して送信します。「送信後に元のページへ戻る」をオンにすると、自動で元のページに戻ります。" }
+      ]
+    }
+  ]
+}
+</script>
+<style>
+  :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo, sans-serif; color: #292d25; background: #f7f6f0; line-height: 1.7; }
+  body { margin: 0; }
+  main { max-width: 820px; margin: 0 auto; padding: 48px 24px 80px; }
+  .lang { margin: -24px 0 24px; text-align: right; font-size: 13px; color: #777b70; }
+  .lang a { color: #566645; text-decoration: none; }
+  .lang a:hover { text-decoration: underline; }
+  .lang [aria-current] { color: #292d25; font-weight: 600; }
+  h1 { font-size: 34px; letter-spacing: 1px; margin: 0 0 8px; }
+  h1 span { display: block; font-size: 14px; letter-spacing: 2px; color: #566645; }
+  .tagline { font-size: 18px; color: #4a5142; margin: 0 0 24px; }
+  .cta { display: inline-block; padding: 10px 18px; border-radius: 10px; background: #303a2c; color: #f0cf81; text-decoration: none; font-weight: 600; }
+  .cta.secondary { background: #eef0e6; color: #303a2c; margin-left: 8px; }
+  h2 { margin-top: 44px; font-size: 22px; }
+  .feature { padding: 16px 0; border-top: 1px solid #e3e5db; }
+  .feature h3 { margin: 0 0 6px; font-size: 16px; }
+  .feature p { margin: 0; color: #4a5142; }
+  kbd { padding: 2px 6px; border: 1px solid #d7dbcf; border-radius: 4px; background: #fff; font-size: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  td, th { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e3e5db; vertical-align: top; }
+  details { padding: 10px 0; border-top: 1px solid #e3e5db; }
+  summary { cursor: pointer; font-weight: 600; }
+  footer { margin-top: 56px; color: #777b70; font-size: 13px; }
+  footer a { color: #566645; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="lang" aria-label="言語 / Language"><a href="../" hreflang="en" lang="en">English</a> · <a href="../zh/" hreflang="zh-CN" lang="zh-CN">简体中文</a> · <span aria-current="page">日本語</span></nav>
+  <h1>Hiraishin<span>飛雷神 · CHROME 拡張機能</span></h1>
+  <p class="tagline">Option / Alt を押しながら、振って、離す。<br>ホイールでタブを切り替え、ページを整理し、選択テキストを AI に送れます。</p>
+  <p><a class="cta" href="#install">インストールと使い方</a><a class="cta secondary" href="privacy">プライバシー</a></p>
+
+  <h2>まずはホイールから</h2>
+  <section class="feature"><h3>押して、振って、離す</h3><p>設定でサイトへのアクセスを許可したら、macOS では Option、Windows / Linux では Alt を押しながらマウスを振ってアクションを選び、離すと実行します。キーを押したまま動かさなければ何も表示されず、中心で離しても何も実行されません。Esc キーか右クリックでキャンセルできます。</p></section>
+  <section class="feature"><h3>方向もアクションも自分で決める</h3><p>ホイールは 4 / 6 / 8 / 12 分割から選べ、各セクターにアクションを入れるか空けておけます。ツールバーのアイコンをクリックしても同じホイールが開き、クリックで実行できます。ホイールからタブをまとめて閉じるときは、閉じる数を表示して確認してから実行します。</p></section>
+  <h2>こんなときに</h2>
+  <section class="feature">
+    <h3>「さっきのページはどこ？」→ タブ履歴を戻る / 進む</h3>
+    <p>実際に切り替えたタブをウィンドウごとに記録し、VS Code の移動履歴のように戻ったり進んだりできます。既定のキーは <kbd>Ctrl+,</kbd> / <kbd>Ctrl+.</kbd> で、<kbd>Ctrl+-</kbd> / <kbd>Ctrl+Shift+-</kbd> をページ内ショートカットとして使うこともできます。戻ったあとに手動で別のタブを開くと、その先の履歴は切り捨てられます。端まで来たらそこで止まります。</p>
+  </section>
+  <section class="feature">
+    <h3>「この作業はここまで」→ 右側のタブを閉じる、新しいウィンドウへ移動</h3>
+    <p>現在のタブを基準に、右側の固定されていないタブをすべて閉じます。現在のタブ、または現在のタブと左側・右側のタブをまとめて新しいウィンドウへ移動でき、タブグループの名前と色も引き継がれます。</p>
+  </section>
+  <section class="feature">
+    <h3>「毎回この操作が面倒」→ タブの複製・移動、リンクのコピー</h3>
+    <p>タブの複製、左 / 右 / 先頭 / 末尾への移動、1 つまたは複数のタブのリンクのコピー（プレーンテキストまたは Markdown）。どれもショートカットを割り当てられます。</p>
+  </section>
+  <section class="feature">
+    <h3>「見つけた内容をすぐ AI に渡したい」→ ChatGPT / Claude に入力・送信</h3>
+    <p>テキストを選択し、ホイール、ショートカット、または右クリックから実行すると、Hiraishin は現在のウィンドウで一番左にあるチャットタブに切り替え（なければ隣に新しく開き）、入力して送信します。下書きがあれば上書きしません。未ログイン、回答の生成中、送信を確認できないときは、はっきりお知らせします。「送信後に元のページへ戻る」も選べます。互換性のあるサイトをカスタム送信先として設定することもできますが、正しい URL ルールとページのセレクターが必要です。</p>
+  </section>
+
+  <h2>アクション一覧</h2>
+  <table>
+    <thead><tr><th>カテゴリ</th><th>アクション</th></tr></thead>
+    <tbody>
+      <tr><td>移動</td><td>タブ履歴を戻る / 進む · 直前のタブに切り替え</td></tr>
+      <tr><td>整理</td><td>右側のタブを閉じる · 左 / 右 / 先頭 / 末尾へ移動 · 現在のタブ / 左側を含めて / 右側を含めて新しいウィンドウへ</td></tr>
+      <tr><td>複製と持ち出し</td><td>タブを複製 · リンクをコピー · Markdown リンクとしてコピー</td></tr>
+      <tr><td>AI 送信先</td><td>ChatGPT、Claude、デフォルトの送信先を開く / に送信。カスタム送信先は対応範囲に応じて、開く・入力・送信に対応</td></tr>
+    </tbody>
+  </table>
+  <p>コマンドの完全な一覧（機械可読、英語）：<a href="../actions.json">actions.json</a>。大規模言語モデル向けの説明（英語）：<a href="../llms.txt">llms.txt</a>。</p>
+
+  <h2>よくある質問</h2>
+  <details><summary>Hiraishin のタブ履歴とブラウザの「戻る」は何が違いますか？</summary><p>ブラウザの「戻る」は同じタブの中で前の URL に戻ります。Hiraishin はタブ間の切り替えの軌跡をウィンドウごとに記録し、「戻る」で直前にアクティブだったタブに切り替えます。</p></details>
+  <details><summary>現在のタブより右のタブをショートカットでまとめて閉じるには？</summary><p>chrome://extensions/shortcuts で「右側のタブを閉じる」に好きなキーの組み合わせを割り当てます。固定したタブや他のウィンドウには影響しません。</p></details>
+  <details><summary>ページで選択したテキストを ChatGPT や Claude に直接送るには？</summary><p>テキストを選択し、ホイール、ショートカット、または右クリックメニューから送信します。送信先は現在のウィンドウで一番左にあるチャットタブで、なければ新しく開きます。入力欄に下書きがある場合は止まってお知らせします。</p></details>
+  <details><summary>Chrome 拡張機能のショートカットはマイナスキーに対応していませんが、Ctrl+- はどうやって使えるのですか？</summary><p>アクセスを許可したサイトで Hiraishin がキー入力を受け取り、「ページ内ショートカット」として扱います。アドレスバーや Chrome の内部ページでは、ネイティブショートカットかツールバーのホイールを使ってください。</p></details>
+  <details><summary>閲覧データはアップロードされますか？</summary><p>いいえ。設定とタブ履歴は端末内にのみ保存されます。選択テキストは、あなたが入力や送信を実行したときにだけ、選んだ AI サイトに渡されます。</p></details>
+  <details><summary>料金はかかりますか？</summary><p>すべての機能を 14 日間無料でお試しいただけます。試用期間は、初めて操作が成功したときから始まります。試用終了後は、一度購入するだけで引き続きお使いいただけます。サブスクリプションではありません。試用が終わっても、設定と保留中の内容はそのまま残ります。</p></details>
+
+  <h2 id="install">インストールと使い方</h2>
+  <p>現在はリリース候補版です。Chrome ウェブストアのリンクは公開後にお知らせします。開発者からインストールパッケージを受け取っている場合は、ZIP を展開 → chrome://extensions を開く → デベロッパー モードをオン → 展開したフォルダを読み込む、の順に進めてください。</p>
+  <p>ツールバーのアイコンを固定し、まずはクリックでホイールを試してみてください。設定でサイトへのアクセスを許可すると、ページ上でジェスチャーを使えるようになります。ページ内ホイールは Chrome の内部ページやウェブストアなど、制限されたページでは使えません。AI への送信には、そのサイトへのアクセス許可とログイン済みのアカウントが必要です。サイトの画面が変わると、うまく動かなくなることがあります。</p>
+  <footer>
+    <p>Hiraishin（飛雷神）は <a href="https://github.com/taterboom">taterboom</a> が開発しています。<a href="privacy">プライバシーとデータの取り扱い</a>。Chrome 121 以降が必要です。</p>
+  </footer>
+</main>
+</body>
+</html>

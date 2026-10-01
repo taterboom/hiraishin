@@ -3,6 +3,7 @@
 // refresh. A network or server failure never turns a purchase into "not purchased": only the
 // service explicitly answering "revoked" does (docs/LICENSE_INTEGRATION.md §3).
 import { MENKYO_URL, MENKYO_PUBLIC_JWK } from './license-config.js';
+import { t, getLocale } from './i18n.js';
 
 export const LICENSE_KEY = 'license';
 export const SYNC_KEY = 'hiraishinLicense';
@@ -86,7 +87,7 @@ export function createLicense(api, {
   };
 
   async function call(path, body) {
-    if (!serviceUrl) throw new Error('购买服务尚未配置。');
+    if (!serviceUrl) throw new Error(t('bg.license.notConfigured'));
     let response;
     try {
       response = await fetch(`${serviceUrl}${path}`, {
@@ -94,9 +95,9 @@ export function createLicense(api, {
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
     } catch {
-      throw new NetworkError('无法连接授权服务，请检查网络后重试。');
+      throw new NetworkError(t('bg.license.offline'));
     }
-    if (response.status >= 500) throw new NetworkError('授权服务暂时不可用，请稍后重试。');
+    if (response.status >= 500) throw new NetworkError(t('bg.license.unavailable'));
     return { status: response.status, body: await response.json().catch(() => ({})) };
   }
 
@@ -121,14 +122,14 @@ export function createLicense(api, {
   };
 
   async function storeToken(state, token) {
-    if (!(await verifyToken(token, publicJwk))) throw new Error('授权服务返回的凭据无法验证。');
+    if (!(await verifyToken(token, publicJwk))) throw new Error(t('bg.license.badToken'));
     // Spread refreshes across the day so installs do not converge on one moment.
     Object.assign(state, { token, revoked: false, failures: 0, nextRefreshAt: now() + REFRESH_MS * (0.75 + random() * 0.5) });
   }
 
   async function activateNow(state, input) {
     const { status, body } = await call('/license/claim', { business_key: BUSINESS_KEY, license_key: String(input) });
-    if (status !== 200) throw new Error(status === 400 ? '授权码格式不正确。' : '授权码无效或已被撤销。');
+    if (status !== 200) throw new Error(t(status === 400 ? 'bg.license.badFormat' : 'bg.license.invalidKey'));
     await storeToken(state, body.token);
     state.licenseKey = String(input).trim().toUpperCase().replace(/\s+/g, '');
     state.credential = null;
@@ -168,11 +169,12 @@ export function createLicense(api, {
       await write(state);
     }) : Promise.resolve()),
 
-    /** Menkyo generates the claim credential; nothing is stored server-side until payment. */
+    /** Menkyo generates the claim credential; nothing is stored server-side until payment.
+     *  `locale` makes the Stripe checkout and the thank-you page match the interface language. */
     startPurchase: () => enqueue(async () => {
-      const { status, body } = await call('/purchase', { business_key: BUSINESS_KEY });
+      const { status, body } = await call('/purchase', { business_key: BUSINESS_KEY, locale: getLocale() });
       if (status !== 200 || typeof body.claim_credential !== 'string' || typeof body.purchase_url !== 'string') {
-        throw new Error('暂时无法开始购买，请稍后重试。');
+        throw new Error(t('bg.license.purchaseFailed'));
       }
       const state = await read();
       state.credential = body.claim_credential;
@@ -192,13 +194,13 @@ export function createLicense(api, {
         await write(state);
         return { status: 'revoked' };
       }
-      if (status !== 200 || typeof body.license_key !== 'string') throw new Error('领取授权失败，请稍后重试。');
+      if (status !== 200 || typeof body.license_key !== 'string') throw new Error(t('bg.license.collectFailed'));
       await activateNow(state, body.license_key);
       return { status: 'activated', licenseKey: state.licenseKey };
     }),
 
     activate: input => enqueue(async () => {
-      if (typeof input !== 'string' || !input.trim()) throw new Error('请输入授权码。');
+      if (typeof input !== 'string' || !input.trim()) throw new Error(t('bg.license.enterKey'));
       const state = await read();
       await activateNow(state, input);
       return view(state);

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { t } from '../../src/i18n.js';
 import { Wheel, WHEEL_SIZE } from '../overlay/Wheel';
 import { ActionIcon } from '../popup/icons';
 import type { ActionInfo, SettingsView } from '../shared/types';
@@ -46,24 +47,28 @@ export function WheelPositionDialog({ action, view, onAssign, onClose }: {
       if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) onClose();
     }}>
     <div className="dialog-head">
-      <h3 id="position-dialog-title">选择放置位置</h3>
-      <button type="button" className="icon-close" aria-label="关闭位置选择" disabled={busy} onClick={onClose}>×</button>
+      <h3 id="position-dialog-title">{t('options.position.title')}</h3>
+      <button type="button" className="icon-close" aria-label={t('options.position.closeAria')} disabled={busy} onClick={onClose}>×</button>
     </div>
     <div className="position-action"><ActionIcon action={action} /><span>{action.name}</span></div>
-    <p>点击一个分区放入此动作，原有动作会被替换。</p>
+    <p>{t('options.position.lead')}</p>
     <div className="wheel-stage">
       <div className="wheel-frame">
         <Wheel slots={slots} activeIndex={activeIndex} position={{ left: WHEEL_SIZE / 2, top: WHEEL_SIZE / 2 }}
           unavailable={() => ''} onSelect={setActiveIndex} onActivate={assign} allowEmpty busy={busy}
-          sectorLabel={index => `${wheelDirection(index, slots.length)}，${slots[index]?.name ?? '空分区'}，放入${action.name}`}
-          idleTitle={direction || '选择位置'} idleHint={direction ? '点击放入' : '点击一瓣放入'}
-          hint="点击替换" confirmHint="点击替换" />
+          sectorLabel={index => t('options.position.sectorLabel', {
+            direction: wheelDirection(index, slots.length), current: slots[index]?.name ?? t('options.position.emptySector'), name: action.name,
+          })}
+          idleTitle={direction || t('options.position.idleTitle')}
+          idleHint={direction ? t('options.position.idleHintDirection') : t('options.position.idleHint')}
+          hint={t('options.position.replaceHint')} confirmHint={t('options.position.replaceHint')} />
       </div>
     </div>
     <p className="position-caption" aria-live="polite">
-      {busy ? '正在保存…' : activeIndex === null ? '也可以用方向键选择，按 Enter 放入。'
-        : `${direction} · ${active?.id === action.id ? '已在此位置' : active ? `替换「${active.name}」` : '空分区'}`}
+      {busy ? t('options.position.saving') : activeIndex === null ? t('options.position.keyboardHint')
+        : `${direction} · ${active?.id === action.id ? t('options.position.alreadyHere')
+          : active ? t('options.position.replace', { name: active.name }) : t('options.position.emptySector')}`}
     </p>
-    {error && <p className="position-error" role="alert">保存失败，请重新选择位置重试。</p>}
+    {error && <p className="position-error" role="alert">{t('options.position.error')}</p>}
   </dialog>;
 }

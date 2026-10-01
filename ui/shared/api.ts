@@ -1,11 +1,12 @@
 // Typed message client for the service worker. Every page call goes through here.
+import { t } from '../../src/i18n.js';
 import type { ActionResult, CollectResult, LicenseView, PanelState, Settings, SettingsView, TaskInfo, UsageStatsData } from './types';
 
 export class ApiError extends Error {}
 
 async function send<T>(message: Record<string, unknown>): Promise<T> {
   const response = await chrome.runtime.sendMessage(message);
-  if (!response?.ok) throw new ApiError(response?.error || '操作未完成，请重试。');
+  if (!response?.ok) throw new ApiError(response?.error || t('shared.error.retry'));
   return response as T;
 }
 
@@ -37,10 +38,10 @@ export function domainFor(url: string): string {
   try {
     const parsed = new URL(url);
     if (parsed.protocol === 'chrome:') return `chrome://${parsed.hostname}`;
-    if (parsed.protocol === 'file:') return '本地文件';
-    if (parsed.protocol === 'chrome-extension:') return 'Chrome 扩展程序';
+    if (parsed.protocol === 'file:') return t('shared.domain.file');
+    if (parsed.protocol === 'chrome-extension:') return t('shared.domain.extension');
     return parsed.hostname || parsed.protocol;
   } catch {
-    return '标签页';
+    return t('shared.domain.tab');
   }
 }

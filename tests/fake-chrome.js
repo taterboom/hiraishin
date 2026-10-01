@@ -69,6 +69,8 @@ export function createFakeChrome({
   const matchesUrl = (url, patterns) => patterns.some(pattern => new RegExp(`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`).test(url));
 
   const api = {
+    // Tests assert the Chinese copy the extension was written in.
+    i18n: { getUILanguage: () => 'zh-CN' },
     runtime: {
       id: 'ext', lastError: undefined,
       getPlatformInfo: async () => ({ os: data.platform }),

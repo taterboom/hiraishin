@@ -14,12 +14,13 @@ import { normalizeNative } from './keys.js';
 import { normalizeSettings } from './settings.js';
 import { createUsageStore } from './usage.js';
 import { createLicense } from './license.js';
+import { applyLocalePreference, t } from './i18n.js';
 
 export const HISTORY_KEY = 'tabHistory';
 export { SETTINGS_KEY, PAGE_ORIGINS, COMMAND_IDS };
 const MENU_ROOT = 'hiraishin-root';
 const ACTIVATION_MARKER_TTL = 10000;
-export const LOCKED_MESSAGE = '试用已结束。购买或输入授权码后即可继续使用，设置和待处理内容都已保留。';
+export const lockedMessage = () => t('bg.locked');
 
 /** @param {any} api @param {{ license?: import('./license.js').LicenseOptions }} [options] */
 export function createController(api, { license: licenseOptions } = {}) {
@@ -31,7 +32,18 @@ export function createController(api, { license: licenseOptions } = {}) {
   const overlayClosures = new Map();
   const popupClosures = new Map();
 
-  const settingsStore = createSettingsStore(api);
+  // Every settings read also sets the worker's language, so whatever runs next (a notification, a
+  // menu title, an error) speaks the language the user picked, including right after a change.
+  const storedSettings = createSettingsStore(api);
+  const withLocale = settings => { applyLocalePreference(settings.locale, api); return settings; };
+  const settingsStore = {
+    get: () => storedSettings.get().then(withLocale),
+    set: settings => storedSettings.set(settings).then(withLocale),
+    update: mutate => storedSettings.update(mutate).then(withLocale),
+  };
+  // A worker woken by a message has not read settings yet; load the language once up front so
+  // even a message that never reads settings answers in the saved language.
+  const localeLoaded = settingsStore.get().catch(() => null);
   const tabOps = createTabOps(api);
   const targets = createTargetService(api);
   const shortcuts = createShortcutService(api, { settingsStore, listActionsFor: listActions });
@@ -44,9 +56,13 @@ export function createController(api, { license: licenseOptions } = {}) {
   const license = createLicense(api, licenseOptions);
   // Every path that really performs an operation calls one of these two before doing anything.
   // Previews count too, so a user never confirms a dialog only to be refused afterwards.
-  const denied = () => ({ status: 'license-required', message: LOCKED_MESSAGE, notify: true });
+  const denied = () => ({ status: 'license-required', message: lockedMessage(), notify: true });
   async function requireLicense() {
-    if (!(await license.allowed())) throw new Error(LOCKED_MESSAGE);
+    if (await license.allowed()) return;
+    // The worker may have just woken for this message; read settings so the refusal is in the
+    // user's language.
+    await settingsStore.get();
+    throw new Error(lockedMessage());
   }
   const noteResult = result => license.noteResult(result).catch(error => console.warn('[Hiraishin license]', error));
 
@@ -82,7 +98,7 @@ export function createController(api, { license: licenseOptions } = {}) {
     const query = Number.isInteger(windowId) && windowId >= 0 ? { windowId } : { lastFocusedWindow: true };
     const tabs = await api.tabs.query(query);
     const active = tabs.find(tab => tab.active);
-    if (!active) throw new Error('当前窗口没有可操作的标签页。');
+    if (!active) throw new Error(t('bg.error.noActiveTab'));
     const id = active.windowId;
     let history = pruneHistory(histories[id] ?? createHistory(), tabs.map(tab => tab.id));
     if (history.entries[history.cursor] !== active.id) history = recordVisit(history, active.id);
@@ -94,7 +110,7 @@ export function createController(api, { license: licenseOptions } = {}) {
     if (!target) return { changed: false };
     const { windowId, active, history } = context;
     const tab = await api.tabs.get(target.tabId);
-    if (tab.windowId !== windowId) throw new Error('该标签页已移到另一个窗口，请重试。');
+    if (tab.windowId !== windowId) throw new Error(t('bg.error.tabMovedWindow'));
     histories[windowId] = moveCursor(history, target.cursor);
     await persist();
     if (target.tabId === active.id) return { changed: true };
@@ -114,7 +130,7 @@ export function createController(api, { license: licenseOptions } = {}) {
   }
 
   async function navigate(windowId, direction) {
-    if (direction !== -1 && direction !== 1) throw new Error('无效的导航方向。');
+    if (direction !== -1 && direction !== 1) throw new Error(t('bg.error.invalidDirection'));
     const context = await windowContext(windowId);
     const target = findTarget(context.history, direction, context.active.id);
     if (!target) { await persist(); return { changed: false }; }
@@ -126,7 +142,7 @@ export function createController(api, { license: licenseOptions } = {}) {
     const candidates = tabs.filter(tab => tab.index > active.index && !tab.pinned);
     if (approved && (active.id !== approved.anchorId || active.windowId !== approved.windowId
       || candidates.length !== approved.tabIds.length || candidates.some(tab => !approved.tabIds.includes(tab.id)))) {
-      throw new Error('右侧标签页已变化，请重新打开轮盘确认。');
+      throw new Error(t('bg.error.rightChanged'));
     }
     let closedCount = 0;
     for (const candidate of candidates) {
@@ -153,7 +169,7 @@ export function createController(api, { license: licenseOptions } = {}) {
   }
 
   async function copyTextNow(text) {
-    if (!api.offscreen) throw new Error('当前浏览器不支持后台复制。');
+    if (!api.offscreen) throw new Error(t('bg.error.noOffscreen'));
     const exists = api.offscreen.hasDocument ? await api.offscreen.hasDocument() : false;
     if (!exists) {
       await api.offscreen.createDocument({ url: 'offscreen.html', reasons: ['CLIPBOARD'], justification: '将链接写入剪贴板' });
@@ -164,7 +180,7 @@ export function createController(api, { license: licenseOptions } = {}) {
       if (!reply) await new Promise(resolve => setTimeout(resolve, 100));
     }
     await api.offscreen.closeDocument?.().catch(() => {});
-    if (!reply?.ok) throw new Error('复制到剪贴板失败。');
+    if (!reply?.ok) throw new Error(t('bg.error.copyFailed'));
   }
 
   const menuCall = (method, ...args) => new Promise((resolve, reject) => {
@@ -178,14 +194,14 @@ export function createController(api, { license: licenseOptions } = {}) {
     if (!api.contextMenus) return;
     const settings = await settingsStore.get();
     await menuCall('removeAll');
-    await menuCall('create', { id: MENU_ROOT, title: '飛雷神', contexts: ['selection'] });
+    await menuCall('create', { id: MENU_ROOT, title: t('bg.menu.root'), contexts: ['selection'] });
     // "发送" is the primary transfer; "填入" stays reachable from search, shortcuts and task retry,
     // and only appears here for targets that cannot send at all.
     for (const target of resolveTargets(settings)) {
       if (supports(target, 'send')) {
-        await menuCall('create', { id: `send:${target.id}`, parentId: MENU_ROOT, title: `发送到 ${target.name}`, contexts: ['selection'] });
+        await menuCall('create', { id: `send:${target.id}`, parentId: MENU_ROOT, title: t('action.mode.send', { target: target.name }), contexts: ['selection'] });
       } else if (supports(target, 'fill')) {
-        await menuCall('create', { id: `fill:${target.id}`, parentId: MENU_ROOT, title: `填入 ${target.name}`, contexts: ['selection'] });
+        await menuCall('create', { id: `fill:${target.id}`, parentId: MENU_ROOT, title: t('action.mode.fill', { target: target.name }), contexts: ['selection'] });
       }
     }
   }
@@ -197,7 +213,7 @@ export function createController(api, { license: licenseOptions } = {}) {
     if (!Number.isInteger(context.tabId)) {
       const query = Number.isInteger(context.windowId) ? { windowId: context.windowId, active: true } : { lastFocusedWindow: true, active: true };
       const [tab] = await api.tabs.query(query);
-      if (!tab) throw new Error('当前窗口没有可操作的标签页。');
+      if (!tab) throw new Error(t('bg.error.noActiveTab'));
       context.tabId = tab.id;
       context.windowId = tab.windowId;
     } else if (!Number.isInteger(context.windowId)) {
@@ -225,9 +241,9 @@ export function createController(api, { license: licenseOptions } = {}) {
   async function runAction(actionId, rawCtx) {
     const settings = await settingsStore.get();
     const action = getAction(actionId, settings);
-    if (!action) throw new Error('未知动作。');
+    if (!action) throw new Error(t('bg.error.unknownAction'));
     if (!(await license.allowed())) {
-      if (rawCtx.origin !== 'popup') await notify(LOCKED_MESSAGE);
+      if (rawCtx.origin !== 'popup') await notify(lockedMessage());
       return denied();
     }
     await countAction(action.id, rawCtx.origin);
@@ -237,13 +253,13 @@ export function createController(api, { license: licenseOptions } = {}) {
       switch (action.kind) {
         case 'history': {
           const outcome = await enqueue(() => navigate(ctx.windowId, action.direction));
-          result = outcome.changed ? ok() : { status: 'noop', message: '已到访问历史边界。', notify: false };
+          result = outcome.changed ? ok() : { status: 'noop', message: t('bg.history.edge'), notify: false };
           break;
         }
         case 'previous-tab': result = await enqueue(() => tabOps.previousTab(ctx.windowId)); break;
         case 'close-right': {
           const { closedCount } = await enqueue(() => closeRight(ctx.windowId));
-          result = closedCount ? ok(`已关闭 ${closedCount} 个标签页。`) : { status: 'noop', message: '右侧没有可关闭的标签页。', notify: true };
+          result = closedCount ? ok(t('bg.tabs.closed', { count: closedCount })) : { status: 'noop', message: t('bg.tabs.nothingRight'), notify: true };
           break;
         }
         case 'move': result = await tabOps.move(ctx.windowId, action.move); break;
@@ -252,7 +268,7 @@ export function createController(api, { license: licenseOptions } = {}) {
         case 'duplicate': result = await tabOps.duplicate(ctx.windowId); break;
         case 'copy-links': {
           const links = await tabOps.copyLinks(ctx.windowId, action.format);
-          if (links.status === 'ok') { await copyText(links.text); result = ok(`已复制 ${links.count} 个链接。`); }
+          if (links.status === 'ok') { await copyText(links.text); result = ok(t('bg.links.copied', { count: links.count })); }
           else result = { ...links, notify: true };
           break;
         }
@@ -261,10 +277,10 @@ export function createController(api, { license: licenseOptions } = {}) {
           await noteResult(transferred);
           return transferred;
         }
-        default: throw new Error('未知动作。');
+        default: throw new Error(t('bg.error.unknownAction'));
       }
     } catch (error) {
-      if (ctx.origin !== 'popup') await notify(error.message || '操作失败。');
+      if (ctx.origin !== 'popup') await notify(error.message || t('bg.error.generic'));
       throw error;
     }
     result.notify ??= false;
@@ -322,7 +338,7 @@ export function createController(api, { license: licenseOptions } = {}) {
       windowId: id, cursor: history.cursor,
       entries: history.entries.map((tabId, cursor) => ({
         tabId, cursor, current: cursor === history.cursor,
-        title: byId.get(tabId)?.title || '未命名标签页', url: byId.get(tabId)?.url || '',
+        title: byId.get(tabId)?.title || t('bg.tabs.untitled'), url: byId.get(tabId)?.url || '',
       })),
       canBack: Boolean(findTarget(history, -1, active.id)),
       canForward: Boolean(findTarget(history, 1, active.id)),
@@ -430,20 +446,20 @@ export function createController(api, { license: licenseOptions } = {}) {
       if (message.type === 'overlay-state') return enqueue(() => overlayState(ctx));
       // Only what the wheel draws: an action sitting in one of its sectors.
       const action = getAction(message.id, settings);
-      if (!action || action.panelInput || !settings.overlay.slots.includes(action.id)) throw new Error('未知动作。');
+      if (!action || action.panelInput || !settings.overlay.slots.includes(action.id)) throw new Error(t('bg.error.unknownAction'));
       if (message.type === 'overlay-confirm-action') {
-        if (action.kind !== 'close-right') throw new Error('此动作不需要确认。');
+        if (action.kind !== 'close-right') throw new Error(t('bg.error.noConfirmNeeded'));
         await requireLicense();
         return enqueue(async () => {
           const approved = overlayClosures.get(tab.id);
           if (!approved || approved.token !== message.token || approved.frameId !== sender.frameId
-            || Date.now() > approved.expiresAt) throw new Error('确认已失效，请重新打开轮盘。');
+            || Date.now() > approved.expiresAt) throw new Error(t('bg.error.confirmExpired'));
           // Consume before executing, including on failure, so double clicks cannot replay it.
           overlayClosures.delete(tab.id);
           await countAction('close-right', 'overlay');
           const { closedCount } = await closeRight(ctx.windowId, approved);
           if (closedCount) await noteResult(ok());
-          return ok(`已关闭 ${closedCount} 个标签页。`);
+          return ok(t('bg.tabs.closed', { count: closedCount }));
         });
       }
       if (action.kind === 'close-right') {
@@ -452,9 +468,9 @@ export function createController(api, { license: licenseOptions } = {}) {
           for (const [id, plan] of overlayClosures) if (Date.now() > plan.expiresAt) overlayClosures.delete(id);
           overlayClosures.delete(tab.id);
           const { active, tabs } = await windowContext(ctx.windowId);
-          if (active.id !== tab.id) throw new Error('当前标签页已变化，请重新打开轮盘。');
+          if (active.id !== tab.id) throw new Error(t('bg.error.activeChanged'));
           const tabIds = tabs.filter(item => item.index > active.index && !item.pinned).map(item => item.id);
-          if (!tabIds.length) throw new Error('右侧没有可关闭的标签页。');
+          if (!tabIds.length) throw new Error(t('bg.tabs.nothingRight'));
           const token = crypto.randomUUID();
           overlayClosures.set(tab.id, { token, anchorId: tab.id, windowId: tab.windowId,
             frameId: sender.frameId, tabIds, expiresAt: Date.now() + 120000 });
@@ -463,11 +479,12 @@ export function createController(api, { license: licenseOptions } = {}) {
       }
       return runAction(action.id, { ...ctx, origin: 'overlay' });
     }
-    throw new Error('此操作只能在扩展面板中执行。');
+    throw new Error(t('bg.error.panelOnly'));
   }
 
   async function handleMessage(message, sender = {}) {
-    if (!message || typeof message !== 'object') throw new Error('无效的请求。');
+    await localeLoaded;
+    if (!message || typeof message !== 'object') throw new Error(t('bg.error.invalidRequest'));
     if (sender.tab && !isExtensionPage(sender)) return handleContentMessage(message, sender);
     const popupCtx = extra => ({ origin: 'popup', windowId: message.windowId, ...extra });
     switch (message.type) {
@@ -478,7 +495,7 @@ export function createController(api, { license: licenseOptions } = {}) {
         for (const [id, plan] of popupClosures) if (Date.now() > plan.expiresAt) popupClosures.delete(id);
         popupClosures.delete(windowId);
         const tabIds = tabs.filter(tab => tab.index > active.index && !tab.pinned).map(tab => tab.id);
-        if (!tabIds.length) throw new Error('右侧没有可关闭的标签页。');
+        if (!tabIds.length) throw new Error(t('bg.tabs.nothingRight'));
         const token = crypto.randomUUID();
         popupClosures.set(windowId, { token, anchorId: active.id, windowId, tabIds, expiresAt: Date.now() + 120000 });
         return { confirmation: { token, count: tabIds.length } };
@@ -486,13 +503,13 @@ export function createController(api, { license: licenseOptions } = {}) {
       case 'popup-close-confirm': await requireLicense(); return enqueue(async () => {
         const approved = popupClosures.get(message.windowId);
         if (!approved || approved.token !== message.token || Date.now() > approved.expiresAt) {
-          throw new Error('确认已失效，请重新打开轮盘。');
+          throw new Error(t('bg.error.confirmExpired'));
         }
         popupClosures.delete(message.windowId);
         await countAction('close-right', 'popup');
         const { closedCount } = await closeRight(message.windowId, approved);
         if (closedCount) await noteResult(ok());
-        return ok(`已关闭 ${closedCount} 个标签页。`);
+        return ok(t('bg.tabs.closed', { count: closedCount }));
       });
       case 'navigate': await requireLicense(); return enqueue(async () => {
         if (message.direction === -1 || message.direction === 1) await countAction(message.direction === -1 ? 'history-back' : 'history-forward', 'popup');
@@ -512,7 +529,7 @@ export function createController(api, { license: licenseOptions } = {}) {
         const cursor = message.cursor;
         if (!Number.isInteger(cursor) || cursor < 0 || cursor >= context.history.entries.length
           || context.history.entries[cursor] !== message.tabId) {
-          throw new Error('这条记录已变化，请重新打开面板。');
+          throw new Error(t('bg.error.entryChanged'));
         }
         const outcome = await activate(context, { tabId: context.history.entries[cursor], cursor });
         await noteResult(outcome);
@@ -520,12 +537,12 @@ export function createController(api, { license: licenseOptions } = {}) {
       });
       case 'get-settings': return getSettingsView();
       case 'save-settings': {
-        if (!message.settings || typeof message.settings !== 'object') throw new Error('无效的设置。');
+        if (!message.settings || typeof message.settings !== 'object') throw new Error(t('bg.error.invalidSettings'));
         const next = normalizeSettings(message.settings);
         return afterSettingsChange(() => settingsStore.set(next));
       }
       case 'set-web-binding': {
-        if (typeof message.actionId !== 'string') throw new Error('无效的设置。');
+        if (typeof message.actionId !== 'string') throw new Error(t('bg.error.invalidSettings'));
         return afterSettingsChange(() => settingsStore.update(settings => {
           if (message.combo) settings.webShortcuts.bindings[message.actionId] = message.combo;
           else delete settings.webShortcuts.bindings[message.actionId];
@@ -546,6 +563,7 @@ export function createController(api, { license: licenseOptions } = {}) {
       }
       case 'get-license': return { license: await license.status() };
       case 'start-purchase': {
+        await settingsStore.get(); // The checkout page follows the interface language.
         const url = await license.startPurchase();
         await api.tabs.create({ url });
         return { license: await license.status() };
@@ -554,7 +572,7 @@ export function createController(api, { license: licenseOptions } = {}) {
       case 'activate-license': return { license: await license.activate(message.licenseKey) };
       case 'refresh-license': return { license: await license.refresh() };
       case 'remove-task': await transfer.remove(message.taskId); return {};
-      default: throw new Error('未知操作。');
+      default: throw new Error(t('bg.error.unknownOperation'));
     }
   }
 
@@ -570,8 +588,9 @@ export function createController(api, { license: licenseOptions } = {}) {
     onMenuClicked: async (info, tab) => {
       const [mode, targetId] = String(info.menuItemId).split(':');
       if (!['fill', 'send'].includes(mode) || !targetId || !tab) return Promise.resolve(null);
-      if (!(await license.allowed())) { await notify(LOCKED_MESSAGE); return denied(); }
-      const target = resolveTargets(await settingsStore.get()).find(item => item.id === targetId);
+      const settings = await settingsStore.get();
+      if (!(await license.allowed())) { await notify(lockedMessage()); return denied(); }
+      const target = resolveTargets(settings).find(item => item.id === targetId);
       if (target) await countAction(`${target.builtin ? '' : 'target:'}${mode}-${targetId}`, 'menu');
       const result = await runTransfer(mode, targetId, { origin: 'menu', tabId: tab.id, windowId: tab.windowId, frameId: info.frameId, fallbackText: info.selectionText });
       await noteResult(result);

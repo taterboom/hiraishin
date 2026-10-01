@@ -1,5 +1,6 @@
 // Tab arrangement, duplication and MRU helpers (spec §4.2–4.3). Every operation resolves
 // its source from the window's active tab at call time and stays inside that window.
+import { t } from './i18n.js';
 
 const NO_GROUP = -1;
 
@@ -27,7 +28,7 @@ export function createTabOps(api) {
   async function context(windowId) {
     const tabs = (await api.tabs.query({ windowId })).sort((a, b) => a.index - b.index);
     const active = tabs.find(tab => tab.active);
-    if (!active) throw new Error('当前窗口没有可操作的标签页。');
+    if (!active) throw new Error(t('bg.error.noActiveTab'));
     return { tabs, active };
   }
 
@@ -40,7 +41,7 @@ export function createTabOps(api) {
     async previousTab(windowId) {
       const { tabs, active } = await context(windowId);
       const target = recent(tabs, active)[0];
-      if (!target) return { status: 'noop', message: '当前窗口没有其他标签页。' };
+      if (!target) return { status: 'noop', message: t('bg.tabs.noOther') };
       await api.tabs.update(target.id, { active: true });
       return { status: 'ok', tabId: target.id };
     },
@@ -55,20 +56,20 @@ export function createTabOps(api) {
         first: range[0].index,
         last: range[range.length - 1].index,
       }[direction];
-      if (targetIndex === undefined) throw new Error('无效的移动方向。');
-      if (targetIndex === active.index) return { status: 'noop', message: '已经在边界。' };
+      if (targetIndex === undefined) throw new Error(t('bg.error.invalidMove'));
+      if (targetIndex === active.index) return { status: 'noop', message: t('bg.tabs.atEdge') };
       await api.tabs.move(active.id, { index: targetIndex });
       return { status: 'ok', index: targetIndex };
     },
 
     async moveToIndex(windowId, position) {
       const { tabs, active } = await context(windowId);
-      if (!Number.isInteger(position)) throw new Error('请输入目标位置。');
+      if (!Number.isInteger(position)) throw new Error(t('bg.tabs.enterPosition'));
       const pinnedCount = tabs.filter(tab => tab.pinned).length;
       const min = active.pinned ? 1 : pinnedCount + 1;
       const max = active.pinned ? pinnedCount : tabs.length;
       const clamped = Math.min(Math.max(position, min), max);
-      if (clamped - 1 === active.index) return { status: 'noop', message: '已经在该位置。' };
+      if (clamped - 1 === active.index) return { status: 'noop', message: t('bg.tabs.atPosition') };
       await api.tabs.move(active.id, { index: clamped - 1 });
       return { status: 'ok', index: clamped - 1 };
     },
@@ -78,8 +79,8 @@ export function createTabOps(api) {
       const selected = scope === 'current' ? [active]
         : scope === 'with-left' ? tabs.filter(tab => tab.index <= active.index)
           : scope === 'with-right' ? tabs.filter(tab => tab.index >= active.index) : null;
-      if (!selected) throw new Error('无效的范围。');
-      if (selected.length === tabs.length) return { status: 'noop', message: '已经是整个窗口，无需移动。' };
+      if (!selected) throw new Error(t('bg.error.invalidScope'));
+      if (selected.length === tabs.length) return { status: 'noop', message: t('bg.tabs.wholeWindow') };
       const groupIds = [...new Set(selected.map(tab => tab.groupId ?? NO_GROUP).filter(id => id !== NO_GROUP))];
       const groups = new Map();
       for (const id of groupIds) groups.set(id, api.tabGroups ? await api.tabGroups.get(id).catch(() => null) : null);
@@ -109,7 +110,7 @@ export function createTabOps(api) {
       const { tabs, active } = await context(windowId);
       const highlighted = tabs.filter(tab => tab.highlighted);
       const chosen = (highlighted.length > 1 ? highlighted : [active]).filter(tab => tab.url);
-      if (!chosen.length) return { status: 'noop', message: '没有可复制的链接。' };
+      if (!chosen.length) return { status: 'noop', message: t('bg.links.none') };
       return { status: 'ok', text: formatLinks(chosen, format), count: chosen.length };
     },
   };

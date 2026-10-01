@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseCombo, normalizeCombo, normalizeNative, comboFromEvent, nativeEligible, webEligible, reservedReason } from '../src/keys.js';
+import { setLocale } from '../src/i18n.js';
+
+setLocale('zh'); // The assertions below match the Chinese messages.
 
 test('combos parse from manifest, symbol and loose spellings into one canonical form', () => {
   assert.equal(normalizeCombo('Ctrl+Shift+Minus'), 'Ctrl+Shift+Minus');

@@ -315,3 +315,32 @@
 - [ ] 多给两个默认键（切回上一 Tab、关闭右侧）
 - [ ] 删除 api.ts 里无人调用的 navigate / jump / closeRight 与 controller 对应分支
 - [ ] 深色模式
+
+# 国际化：中 / 日 / 英（2026-09-30）
+
+决定（用户确认）：默认跟随浏览器，设置页可切换；其他语言回退英文（default_locale = en）；范围 = 扩展 + 网站（首页 / 隐私 / 感谢）+ 商店文案。
+
+## 设计
+- `src/i18n.js`：唯一入口。`resolveLocale(pref, uiLanguage)`（zh* → zh，ja* → ja，其余 → en）、模块级 `setLocale()` / `t(key, params)`，`{name}` 插值，缺失时回退 en 再回退 key。后台、src 模块、React 页面、网页轮盘共用同一个模块。
+- 词典按区域分文件：`src/locales/{zh,ja,en}/{common,background,options,popup}.js`，便于并行抽取且不互相冲突；`src/locales/index.js` 合并。
+- 设置新增 `locale: 'auto' | 'zh' | 'ja' | 'en'`，默认 auto。后台每次读设置即 `setLocale`；网页轮盘从 pageConfig 读取已解析的 locale；UI 在拿到设置后 `setLocale` 再渲染。
+- manifest 的 name / description / action 标题 / 20 条命令说明改为 `__MSG_*__`，构建时由词典生成 `dist/hiraishin/_locales/{en,zh_CN,ja}/messages.json`。
+- 动作名改为按 id 取词典（`action.<id>`），自定义目标用模板插值；关键词保留中英并补日文。
+- check：三种语言键集合一致、插值参数一致、manifest 引用的每个 `__MSG_*__` 都存在；测试替身的 UI 语言设为 zh-CN，现有中文断言不变。
+
+## 步骤
+- [x] 基础设施：i18n.js、locales 结构、settings.locale、测试替身、构建生成 _locales、manifest 改 __MSG__、check 校验
+- [x] 抽取后台文案（controller / transfer / tab-ops / license / usage / keys / notify / actions / targets）
+- [x] 抽取设置页文案（App / LicenseSection / UsageStats / Wheel*）+ 语言切换下拉
+- [x] 抽取 popup / 网页轮盘 / shared 文案
+- [x] 日文、英文翻译
+- [x] 网站三语：根目录英文，/zh/、/ja/，hreflang 与语言切换；隐私与感谢页同样三语；扩展内隐私链接按语言
+- [x] 商店文案补日文、英文
+- [x] 验证：npm test、check、smoke；三种语言各截图 popup、设置页、网页轮盘
+- [x] 文档：ARCHITECTURE i18n 一节、README
+
+## Review（国际化）
+- npm test 115 通过；npm run check 通过（含三语键与占位符一致性、_locales 生成校验）；npm run smoke 57 项全部通过，新增语言切换断言。
+- 截图复核：设置页日文 / 英文、popup 英文、日文落地页，无溢出与错位。
+- 冒烟有两次失败来自窗口焦点被抢（轨迹里有连串 blur / focus），与改动无关；另一次是新断言复用了后台 popup 页面，已改为新开前台标签页。
+- 待用户决定：网站 / llms.txt / 商店文案仍写「免费、没有服务器」，而隐私页已描述试用、付费授权与授权服务器，三语需统一口径；商店截图与宣传图目前只有中文。

@@ -1,4 +1,5 @@
 import { createController } from './controller.js';
+import { t } from './i18n.js';
 
 const controller = createController(chrome);
 const report = promise => Promise.resolve(promise).catch(error => console.error('[Hiraishin]', error));
@@ -26,7 +27,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message?.type === 'offscreen-copy' || message?.type === 'hiraishin-ping') return false; // Handled by other pages.
   controller.handleMessage(message, sender).then(
     result => sendResponse({ ok: true, ...(result ?? {}) }),
-    error => sendResponse({ ok: false, error: error.message || '操作失败，请重试。' }),
+    error => sendResponse({ ok: false, error: error.message || t('bg.error.retry') }),
   );
   return true;
 });

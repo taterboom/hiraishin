@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { t } from '../../src/i18n.js';
 
 export interface CloseConfirmation {
   count: number;
@@ -67,16 +68,16 @@ export function Confirmation({ state, onCancel, onConfirm }: {
           event.preventDefault();
           buttons[(index + (event.shiftKey ? -1 : 1) + buttons.length) % buttons.length]?.focus();
         }}>
-        <div className="confirmation-eyebrow">关闭标签页</div>
-        <h2 id="close-title">将关闭右侧 {state.count} 个标签页</h2>
-        <p id="close-description">保留当前标签页和固定标签页。</p>
+        <div className="confirmation-eyebrow">{t('overlay.confirm.eyebrow')}</div>
+        <h2 id="close-title">{t('overlay.confirm.title', { count: state.count })}</h2>
+        <p id="close-description">{t('overlay.confirm.description')}</p>
         <p className="confirmation-status" role="status" aria-live="polite">
-          {state.error || (state.busy ? (state.token ? '正在关闭…' : '正在核对标签页…') : '确认后执行，按 Esc 可取消。')}
+          {state.error || (state.busy ? (state.token ? t('overlay.confirm.closing') : t('overlay.confirm.checking')) : t('overlay.confirm.ready'))}
         </p>
         <div className="confirmation-buttons">
-          <button type="button" ref={cancel} onClick={onCancel}>取消</button>
+          <button type="button" ref={cancel} onClick={onCancel}>{t('overlay.confirm.cancel')}</button>
           <button type="button" className="confirmation-close" disabled={state.busy || !state.token || Boolean(state.error)}
-            onClick={onConfirm}>关闭 {state.count} 个</button>
+            onClick={onConfirm}>{t('overlay.confirm.close', { count: state.count })}</button>
         </div>
       </div>
     </div>

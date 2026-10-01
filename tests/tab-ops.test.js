@@ -2,6 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createTabOps, movementRange } from '../src/tab-ops.js';
 import { createFakeChrome, tab } from './fake-chrome.js';
+import { setLocale } from '../src/i18n.js';
+
+setLocale('zh'); // The assertions below match the Chinese messages.
 
 test('movement stays inside the pinned region and the current tab group', () => {
   const tabs = [

@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "飛雷神 Hiraishin",
+  "name": "__MSG_name__",
   "version": "0.2.0",
-  "description": "按住 Option / Alt 甩动轮盘，快速切换、整理和复制标签页，把选中文字发送到 ChatGPT / Claude。",
+  "description": "__MSG_description__",
+  "default_locale": "en",
   "minimum_chrome_version": "121",
   "permissions": [
     "tabs",
@@ -26,7 +27,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "飛雷神 Hiraishin",
+    "default_title": "__MSG_actionTitle__",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/16.png",
@@ -47,72 +48,72 @@
   },
   "commands": {
     "history-back": {
-      "description": "Tab 访问历史：后退",
+      "description": "__MSG_cmd_history_back__",
       "suggested_key": {
         "default": "Ctrl+Comma",
         "mac": "MacCtrl+Comma"
       }
     },
     "history-forward": {
-      "description": "Tab 访问历史：前进",
+      "description": "__MSG_cmd_history_forward__",
       "suggested_key": {
         "default": "Ctrl+Period",
         "mac": "MacCtrl+Period"
       }
     },
     "switch-previous-tab": {
-      "description": "切回上一 Tab"
+      "description": "__MSG_cmd_switch_previous_tab__"
     },
     "close-right": {
-      "description": "关闭当前 Tab 右侧的所有未固定标签页"
+      "description": "__MSG_cmd_close_right__"
     },
     "move-tab-left": {
-      "description": "当前 Tab 左移"
+      "description": "__MSG_cmd_move_tab_left__"
     },
     "move-tab-right": {
-      "description": "当前 Tab 右移"
+      "description": "__MSG_cmd_move_tab_right__"
     },
     "move-tab-first": {
-      "description": "当前 Tab 移到最左"
+      "description": "__MSG_cmd_move_tab_first__"
     },
     "move-tab-last": {
-      "description": "当前 Tab 移到最右"
+      "description": "__MSG_cmd_move_tab_last__"
     },
     "move-to-new-window": {
-      "description": "当前 Tab 移到新窗口"
+      "description": "__MSG_cmd_move_to_new_window__"
     },
     "move-with-left-to-new-window": {
-      "description": "当前及左侧 Tabs 移到新窗口"
+      "description": "__MSG_cmd_move_with_left_to_new_window__"
     },
     "move-with-right-to-new-window": {
-      "description": "当前及右侧 Tabs 移到新窗口"
+      "description": "__MSG_cmd_move_with_right_to_new_window__"
     },
     "duplicate-tab": {
-      "description": "复制标签页"
+      "description": "__MSG_cmd_duplicate_tab__"
     },
     "copy-links": {
-      "description": "复制链接"
+      "description": "__MSG_cmd_copy_links__"
     },
     "copy-links-markdown": {
-      "description": "复制为 Markdown 链接"
+      "description": "__MSG_cmd_copy_links_markdown__"
     },
     "go-to-chatgpt": {
-      "description": "前往 ChatGPT"
+      "description": "__MSG_cmd_go_to_chatgpt__"
     },
     "send-chatgpt": {
-      "description": "发送到 ChatGPT"
+      "description": "__MSG_cmd_send_chatgpt__"
     },
     "go-to-claude": {
-      "description": "前往 Claude"
+      "description": "__MSG_cmd_go_to_claude__"
     },
     "send-claude": {
-      "description": "发送到 Claude"
+      "description": "__MSG_cmd_send_claude__"
     },
     "go-to-default-target": {
-      "description": "前往 默认目标"
+      "description": "__MSG_cmd_go_to_default_target__"
     },
     "send-default-target": {
-      "description": "发送到 默认目标"
+      "description": "__MSG_cmd_send_default_target__"
     }
   }
 }

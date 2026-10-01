@@ -20,7 +20,7 @@ export interface CustomTarget {
 }
 export interface TargetInfo extends CustomTarget { builtin: boolean; site: string; origins: string[]; granted: boolean }
 export interface Settings {
-  version: number; returnAfterSend: boolean; defaultTargetId: string;
+  version: number; locale: 'auto' | 'zh' | 'ja' | 'en'; returnAfterSend: boolean; defaultTargetId: string;
   pinnedActions: string[];
   webShortcuts: { bindings: Record<string, string>; disabledSites: string[] };
   targets: { enabled: Record<string, Capability>; custom: CustomTarget[] };

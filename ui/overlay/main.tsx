@@ -6,6 +6,7 @@ import { flushSync } from 'react-dom';
 import { WHEEL_SIZE, Wheel, sectorAt } from './Wheel';
 import { Confirmation, type CloseConfirmation } from './Confirmation';
 import { MODIFIER_KEYS, isHoldKey, otherModifierDown, resolveHoldCode } from '../../src/keys.js';
+import { LOCALE_TAGS, getLocale, setLocale, t } from '../../src/i18n.js';
 import { unavailableReason, type AvailabilityState } from '../shared/availability';
 import type { ActionInfo } from '../shared/types';
 import sharedMarkCss from '../shared/action-mark.css';
@@ -18,6 +19,7 @@ const HOST_ATTR = 'data-hiraishin-overlay';
  *  Small enough to feel immediate, large enough that a resting hand never trips it. */
 const FLICK_START = 6;
 const HINT_DELAY = 2000;
+const localeTag = () => LOCALE_TAGS[getLocale() as keyof typeof LOCALE_TAGS];
 const guard = globalThis as Record<string, unknown>;
 if (!guard.__hiraishinOverlay) {
   guard.__hiraishinOverlay = true;
@@ -26,6 +28,7 @@ if (!guard.__hiraishinOverlay) {
   // so without this reference hover picking silently matched nothing.
   let shadow: ShadowRoot | null = null;
   let root: Root | null = null;
+  let mount: HTMLElement | null = null;
   let armTimer = 0;
   let open = false;
   let state: OverlayState | null = null;
@@ -71,7 +74,8 @@ if (!guard.__hiraishinOverlay) {
     shadow = host.attachShadow({ mode: 'closed' });
     const style = document.createElement('style');
     style.textContent = `${sharedMarkCss}\n${overlayCss}`;
-    const mount = document.createElement('div');
+    mount = document.createElement('div');
+    mount.lang = localeTag();
     shadow.append(style, mount);
     (document.body || document.documentElement).append(host);
     root = createRoot(mount);
@@ -84,7 +88,7 @@ if (!guard.__hiraishinOverlay) {
     flushSync(() => root!.render(
       confirmation ? <Confirmation state={confirmation} onCancel={hide} onConfirm={() => { void confirmClose(); }} />
       : <Wheel slots={state!.slots} activeIndex={activeIndex} position={position}
-        hint="松开执行" showHint={open && hintVisible} rightCount={state!.rightCount}
+        hint={t('overlay.hint.release')} showHint={open && hintVisible} rightCount={state!.rightCount}
         unavailable={action => unavailableReason(action, state!)} />,
     ));
   }
@@ -154,12 +158,12 @@ if (!guard.__hiraishinOverlay) {
     try {
       const reply = await chrome.runtime.sendMessage({ type: 'overlay-action', id: 'close-right' });
       if (confirmation !== pending) return;
-      if (!reply?.ok || !reply.confirmation) throw new Error(reply?.error || '无法核对标签页，请重新打开轮盘。');
+      if (!reply?.ok || !reply.confirmation) throw new Error(reply?.error || t('overlay.error.verify'));
       pending.count = reply.confirmation.count;
       pending.token = reply.confirmation.token;
     } catch (error) {
       if (confirmation !== pending) return;
-      pending.error = error instanceof Error ? error.message : '无法核对标签页，请重试。';
+      pending.error = error instanceof Error ? error.message : t('overlay.error.verifyRetry');
     }
     pending.busy = false;
     render();
@@ -173,13 +177,13 @@ if (!guard.__hiraishinOverlay) {
     try {
       const reply = await chrome.runtime.sendMessage({ type: 'overlay-confirm-action', id: 'close-right', token: pending.token });
       if (confirmation !== pending) return;
-      if (!reply?.ok || reply.status !== 'ok') throw new Error(reply?.error || '未执行关闭，请重新打开轮盘。');
+      if (!reply?.ok || reply.status !== 'ok') throw new Error(reply?.error || t('overlay.error.notClosed'));
       hide();
     } catch (error) {
       if (confirmation !== pending) return;
       pending.busy = false;
       pending.token = null;
-      pending.error = error instanceof Error ? error.message : '关闭失败，请重试。';
+      pending.error = error instanceof Error ? error.message : t('overlay.error.closeFailed');
       render();
     }
   }
@@ -347,10 +351,20 @@ if (!guard.__hiraishinOverlay) {
   document.addEventListener('visibilitychange', () => { if (document.hidden) { pointerKnown = false; hide(); } });
   document.addEventListener('mouseout', event => { if (!event.relatedTarget) pointerKnown = false; }, { capture: true, passive: true });
 
-  const apply = (value: { overlay?: typeof config } | undefined) => {
+  /** The service worker resolves the preference into pageConfig: a page has no settings access,
+   *  and chrome.i18n here would only know the browser language, not the saved choice. */
+  function applyLocale(locale: string | undefined) {
+    if (!locale || locale === getLocale()) return;
+    setLocale(locale, { labelDocument: false });
+    if (mount) mount.lang = localeTag();
+    if (state && (open || confirmation)) render();
+  }
+
+  const apply = (value: { overlay?: typeof config; locale?: string } | undefined) => {
     const next = { ...config, ...(value?.overlay ?? {}) };
     if (!next.enabled || next.holdCode !== config.holdCode || next.holdMs !== config.holdMs) hide();
     config = next;
+    applyLocale(value?.locale);
   };
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes.pageConfig) apply(changes.pageConfig.newValue);

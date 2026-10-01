@@ -61,6 +61,13 @@ await cp(OUT_DIR, EXT_DIR, { recursive: true });
 await writeFile(path.join(EXT_DIR, 'src/background.js'), await readFile(path.join(EXT_DIR, 'src/background.js'), 'utf8') +
   `\nglobalThis.__hiraishinTest = message => controller.handleMessage(message, { id: chrome.runtime.id, url: chrome.runtime.getURL('popup.html') })\n` +
   `  .then(result => ({ ok: true, ...(result ?? {}) }), error => ({ ok: false, error: error.message || '操作失败，请重试。' }));\n`);
+// The assertions read the Chinese copy, and Chrome for Testing's UI language depends on the
+// machine. Make Chinese the default preference in this copy only; a test that saves an explicit
+// locale still switches, and one that saves settings without a locale gets Chinese back.
+const settingsFile = path.join(EXT_DIR, 'src/settings.js');
+const settingsSource = await readFile(settingsFile, 'utf8');
+if (!settingsSource.includes("locale: 'auto',")) throw new Error('smoke: default locale marker not found in settings.js');
+await writeFile(settingsFile, settingsSource.replace("locale: 'auto',", "locale: 'zh',"));
 const manifest = JSON.parse(await readFile(path.join(EXT_DIR, 'manifest.json'), 'utf8'));
 manifest.host_permissions = ['http://127.0.0.1/*', 'http://*/*', 'https://*/*'];
 await writeFile(path.join(EXT_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2));
@@ -1172,6 +1179,33 @@ try {
 
   opt.exceptions.length === 0 ? pass('options page: no exceptions') : fail('options page exceptions', opt.exceptions.join(' | '));
   opt.close();
+
+  // Language: a saved preference switches the popup, the service worker's action names, the
+  // context menu and the page config the in-page wheel reads, in one save.
+  const localeSettings = (await msg({ type: 'get-settings' })).settings;
+  const localeResults = {};
+  for (const [locale, label, action] of [['ja', '設定を開く', 'タブ履歴を戻る'], ['en', 'Open settings', 'Tab history back']]) {
+    const view = await msg({ type: 'save-settings', settings: { ...localeSettings, locale } });
+    // A fresh, foreground popup tab: the original one sits behind the overlay tests' pages by now,
+    // and a backgrounded extension page stops answering the protocol.
+    await sw.eval(`chrome.tabs.create({ url: chrome.runtime.getURL('popup.html?locale=${locale}'), active: true })`);
+    const localePopup = await attach(await waitTarget(t => t.type === 'page' && t.url.endsWith(`popup.html?locale=${locale}`)));
+    await waitRendered(localePopup, '.popup-wheel-stage .sector');
+    localeResults[locale] = {
+      button: await localePopup.eval(`Boolean(document.querySelector('[aria-label=${JSON.stringify(label)}]'))`),
+      lang: await localePopup.eval('document.documentElement.lang'),
+      action: view.actions.find(item => item.id === 'history-back')?.name === action,
+      page: (await sw.eval(`chrome.storage.local.get('pageConfig').then(r => r.pageConfig.locale)`)) === locale,
+    };
+    // Close through the protocol; awaiting chrome.tabs.remove from the worker can hang.
+    await localePopup.send('Page.close', {}, 5000).catch(() => {});
+    localePopup.close();
+  }
+  await msg({ type: 'save-settings', settings: localeSettings });
+  const localeOk = Object.values(localeResults).every(result => result.button && result.action && result.page)
+    && localeResults.ja.lang === 'ja' && localeResults.en.lang === 'en';
+  localeOk ? pass('switching the language updates the popup, action names and the in-page wheel config')
+    : fail('language switch', JSON.stringify(localeResults));
 } catch (error) {
   fail('smoke aborted', error.stack ?? String(error));
   const snapshot = await sw.eval(`chrome.tabs.query({}).then(t => t.map(x => [x.id, x.windowId, x.index, x.active, x.status, x.url]))`).catch(e => String(e));

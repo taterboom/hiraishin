@@ -13,8 +13,19 @@
 ## Limits
 
 - Chrome 121+, excluding Incognito. Page gestures do not operate on browser-internal or otherwise restricted pages, or while editing an input field.
-- No developer-operated data server, analytics or cloud sync. Selected text is transferred to a third-party website only when the user explicitly invokes fill/send. Failed selections may remain in session storage for up to 30 minutes for recovery.
+- Pricing: every feature is free to try for 14 days (the trial starts at the first successful action); after that a one-time purchase unlocks it. No subscription.
+- No analytics, ads or cloud sync of browsing data. The only developer server is the license service, used to buy, activate and verify a license; those requests contain no browsing data. Selected text is transferred to a third-party website only when the user explicitly invokes fill/send. Failed selections may remain in session storage for up to 30 minutes for recovery.
 - AI page adapters depend on website structure and login state. Local fixture tests do not establish compatibility with a live account. Do not promise guaranteed sending on arbitrary websites.
 - Release candidate: public store/download/support URLs must be verified before describing this release as publicly available. No open-source license is asserted here.
 
-Privacy details: privacy.html
+## Languages
+
+- The extension interface and this website are available in English, Simplified Chinese and Japanese. The extension follows the browser language by default (other languages fall back to English) and can be switched in Settings.
+- English: [Home](https://hiraishin.44san.com/) · [Privacy](https://hiraishin.44san.com/privacy)
+- 简体中文: [首页](https://hiraishin.44san.com/zh/) · [隐私与数据说明](https://hiraishin.44san.com/zh/privacy)
+- 日本語: [ホーム](https://hiraishin.44san.com/ja/) · [プライバシー](https://hiraishin.44san.com/ja/privacy)
+
+## Reference
+
+- [actions.json](https://hiraishin.44san.com/actions.json): machine-readable action list (English names)
+- [Privacy details](https://hiraishin.44san.com/privacy)

@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hiraishin 飛雷神 · Chrome 轮盘 · 切换标签、整理页面、发送选区</title>
+<meta name="description" content="Hiraishin 是一个 Chrome 扩展：按住 Option / Alt 甩动轮盘，快速切换、整理和复制标签页，把选中文字发送到 ChatGPT / Claude。支持自定义分区与快捷键。">
+<meta name="keywords" content="Chrome 扩展, 标签页访问历史, 后退 前进, 关闭右侧标签页 快捷键, 复制标签页 快捷键, 发送选中文字到 ChatGPT, 发送到 Claude, Ctrl+- 快捷键, 标签页管理, Hiraishin, 飛雷神">
+<link rel="canonical" href="https://hiraishin.44san.com/zh/">
+<link rel="alternate" hreflang="en" href="https://hiraishin.44san.com/">
+<link rel="alternate" hreflang="zh-CN" href="https://hiraishin.44san.com/zh/">
+<link rel="alternate" hreflang="ja" href="https://hiraishin.44san.com/ja/">
+<link rel="alternate" hreflang="x-default" href="https://hiraishin.44san.com/">
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:locale:alternate" content="ja_JP">
+<meta property="og:title" content="Hiraishin · 快速操作浏览器的轮盘">
+<meta property="og:description" content="Chrome 标签页访问历史后退 / 前进、整理标签页，并把选中文字发送到 ChatGPT / Claude。">
+<meta property="og:url" content="https://hiraishin.44san.com/zh/">
+<meta name="twitter:card" content="summary">
+<link rel="alternate" type="application/json" href="../actions.json" title="Hiraishin actions (machine-readable)">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://hiraishin.44san.com/zh/#webpage",
+      "url": "https://hiraishin.44san.com/zh/",
+      "name": "Hiraishin 飛雷神 · Chrome 轮盘 · 切换标签、整理页面、发送选区",
+      "inLanguage": "zh-CN",
+      "about": { "@id": "https://hiraishin.44san.com/#app" }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://hiraishin.44san.com/#app",
+      "name": "Hiraishin",
+      "alternateName": "飛雷神",
+      "applicationCategory": "BrowserApplication",
+      "operatingSystem": "Chrome 121+",
+      "inLanguage": ["en", "zh-CN", "ja"],
+      "description": "Chrome 扩展：标签页访问历史后退 / 前进，整理标签页（关闭右侧、复制标签页、移到新窗口），一个快捷键即可把选中文字发送到 ChatGPT 或 Claude。",
+      "url": "https://hiraishin.44san.com/",
+      "author": { "@type": "Person", "name": "taterboom", "url": "https://github.com/taterboom" },
+      "featureList": [
+        "按窗口独立记录的标签页访问历史，可后退、前进",
+        "切回上一 Tab",
+        "关闭右侧标签页、复制标签页、左移 / 右移 / 移到最左 / 最右、移到新窗口",
+        "以纯文本或 Markdown 复制标签页链接",
+        "前往 ChatGPT / Claude，或把选中文字发送过去（当前窗口最左侧的匹配标签页）",
+        "自定义目标网站，配置地址规则与输入框选择器",
+        "浏览器快捷键，以及 Ctrl+- 等网页快捷键",
+        "界面支持简体中文、日语和英语"
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "inLanguage": "zh-CN",
+      "mainEntity": [
+        { "@type": "Question", "name": "Hiraishin 的标签历史和浏览器的后退有什么区别？", "acceptedAnswer": { "@type": "Answer", "text": "浏览器后退在同一个标签页里回到上一个网址；Hiraishin 记录的是你在标签页之间的切换轨迹，每个窗口独立，后退会切回上一个激活过的标签页，就像 VS Code 的位置历史。" } },
+        { "@type": "Question", "name": "怎样用快捷键关闭当前标签右侧的所有标签？", "acceptedAnswer": { "@type": "Answer", "text": "安装 Hiraishin 后，在 chrome://extensions/shortcuts 给“关闭右侧标签页”命令绑定任意组合键。固定标签和其他窗口不受影响。" } },
+        { "@type": "Question", "name": "如何把网页上选中的文字直接发送给 ChatGPT 或 Claude？", "acceptedAnswer": { "@type": "Answer", "text": "选中文字后通过轮盘、快捷键或右键菜单发送。Hiraishin 会切换到当前窗口最左侧的 ChatGPT / Claude 对话页（没有则新建），填入文字并发送；如果输入框已有草稿，它会停下并提示，不会覆盖。" } },
+        { "@type": "Question", "name": "Chrome 扩展快捷键不支持减号，Hiraishin 怎么支持 Ctrl+-？", "acceptedAnswer": { "@type": "Answer", "text": "Hiraishin 在你授权的网页里监听按键，作为“网页快捷键”补充 Chrome 原生快捷键。地址栏和 Chrome 内部页面仍需使用原生快捷键或面板。" } },
+        { "@type": "Question", "name": "Hiraishin 会上传我的浏览数据吗？", "acceptedAnswer": { "@type": "Answer", "text": "不会。设置和访问轨迹只保存在本机；只有在你主动填入或发送时，选中的文字才会交给你选择的 AI 网站。" } }
+      ]
+    },
+    {
+      "@type": "HowTo",
+      "name": "把选中文字发送到 Claude",
+      "inLanguage": "zh-CN",
+      "step": [
+        { "@type": "HowToStep", "text": "在任意网页选中要处理的文字。" },
+        { "@type": "HowToStep", "text": "按“发送到 Claude”的快捷键，或右键选择“飛雷神 → 发送到 Claude”。" },
+        { "@type": "HowToStep", "text": "Hiraishin 切换到当前窗口最左侧的 Claude 对话页，填入并发送；开启“发送后返回来源页”可自动回到原文。" }
+      ]
+    }
+  ]
+}
+</script>
+<style>
+  :root { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif; color: #292d25; background: #f7f6f0; line-height: 1.6; }
+  body { margin: 0; }
+  main { max-width: 820px; margin: 0 auto; padding: 48px 24px 80px; }
+  .lang { margin: -24px 0 24px; text-align: right; font-size: 13px; color: #777b70; }
+  .lang a { color: #566645; text-decoration: none; }
+  .lang a:hover { text-decoration: underline; }
+  .lang [aria-current] { color: #292d25; font-weight: 600; }
+  h1 { font-size: 34px; letter-spacing: 1px; margin: 0 0 8px; }
+  h1 span { display: block; font-size: 14px; letter-spacing: 2px; color: #566645; }
+  .tagline { font-size: 18px; color: #4a5142; margin: 0 0 24px; }
+  .cta { display: inline-block; padding: 10px 18px; border-radius: 10px; background: #303a2c; color: #f0cf81; text-decoration: none; font-weight: 600; }
+  .cta.secondary { background: #eef0e6; color: #303a2c; margin-left: 8px; }
+  h2 { margin-top: 44px; font-size: 22px; }
+  .feature { padding: 16px 0; border-top: 1px solid #e3e5db; }
+  .feature h3 { margin: 0 0 6px; font-size: 16px; }
+  .feature p { margin: 0; color: #4a5142; }
+  kbd { padding: 2px 6px; border: 1px solid #d7dbcf; border-radius: 4px; background: #fff; font-size: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  td, th { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e3e5db; vertical-align: top; }
+  details { padding: 10px 0; border-top: 1px solid #e3e5db; }
+  summary { cursor: pointer; font-weight: 600; }
+  footer { margin-top: 56px; color: #777b70; font-size: 13px; }
+  footer a { color: #566645; }
+</style>
+</head>
+<body>
+<main>
+  <nav class="lang" aria-label="语言 / Language"><a href="../" hreflang="en" lang="en">English</a> · <span aria-current="page">简体中文</span> · <a href="../ja/" hreflang="ja" lang="ja">日本語</a></nav>
+  <h1>Hiraishin<span>飛雷神 · CHROME 扩展</span></h1>
+  <p class="tagline">按住 Option / Alt，甩动、松开。<br>用轮盘切换标签、整理页面，把选中文字发给 AI。</p>
+  <p><a class="cta" href="#install">安装与开始使用</a><a class="cta secondary" href="privacy">隐私说明</a></p>
+  <p><em>Hiraishin: tab history back/forward, tab tidying, and send-selection-to-ChatGPT/Claude for Chrome. 14-day free trial, then a one-time purchase; runs locally.</em></p>
+
+  <h2>先用上轮盘</h2>
+  <section class="feature"><h3>按住、甩动、松开</h3><p>在设置中允许网页访问后，macOS 按住 Option，Windows / Linux 按住 Alt，再甩动鼠标选择动作，松开执行。只按住不动不会弹出，圆心松手不执行；Esc 或右键取消。</p></section>
+  <section class="feature"><h3>你的方向，你的动作</h3><p>4 / 6 / 8 / 12 等分自由配置，每一瓣可以放入动作或留空。点击工具栏图标也能打开同一套轮盘，用鼠标点击执行。轮盘上的批量关闭会先确认数量，再执行。</p></section>
+  <h2>它解决什么问题</h2>
+  <section class="feature">
+    <h3>“刚才那个页面在哪？” → 标签访问历史后退 / 前进</h3>
+    <p>每个窗口独立记录你实际切换过的标签页，像 VS Code 的位置历史一样后退、前进。默认 <kbd>Ctrl+,</kbd> / <kbd>Ctrl+.</kbd>，也可用 <kbd>Ctrl+-</kbd> / <kbd>Ctrl+Shift+-</kbd> 作为网页快捷键。后退后手动打开新标签会截断前进分支；到达边界时停留。</p>
+  </section>
+  <section class="feature">
+    <h3>“这部分工作结束了” → 关闭右侧标签、移到新窗口</h3>
+    <p>以当前标签为锚点关闭右侧所有未固定标签；把当前标签、当前及左侧或右侧标签一起移到新窗口，标签组的名称和颜色会一并带过去。</p>
+  </section>
+  <section class="feature">
+    <h3>“这个动作每次都很麻烦” → 复制标签、移动标签、复制链接</h3>
+    <p>复制标签页、左移 / 右移 / 移到最左最右、复制一个或多个标签的链接（纯文本或 Markdown），全部可绑定快捷键。</p>
+  </section>
+  <section class="feature">
+    <h3>“查到一段内容，想立刻交给 AI” → 填入或发送到 ChatGPT / Claude</h3>
+    <p>选中文字，通过轮盘、快捷键或右键，Hiraishin 切换到当前窗口最左侧的对话页（没有则在旁边新建），填入并发送。已有草稿时不会覆盖；未登录、正在生成、无法确认提交时都会明确告诉你。可选“发送后返回来源页”。可配置兼容网站作为自定义目标，需要正确的地址规则和页面选择器。</p>
+  </section>
+
+  <h2>动作一览</h2>
+  <table>
+    <thead><tr><th>分类</th><th>动作</th></tr></thead>
+    <tbody>
+      <tr><td>穿梭</td><td>访问历史后退 / 前进 · 切回上一 Tab</td></tr>
+      <tr><td>整理</td><td>关闭右侧标签页 · 左移 / 右移 / 最左 / 最右 · 当前 / 含左侧 / 含右侧移到新窗口</td></tr>
+      <tr><td>复制与带走</td><td>复制标签页 · 复制链接 · 复制为 Markdown</td></tr>
+      <tr><td>AI 目标</td><td>前往 / 发送到 ChatGPT、Claude、默认目标；自定义目标按能力支持前往、填入或发送</td></tr>
+    </tbody>
+  </table>
+  <p>完整命令清单（机器可读，英文）：<a href="../actions.json">actions.json</a>；面向大模型的说明（英文）：<a href="../llms.txt">llms.txt</a>。</p>
+
+  <h2>常见问题</h2>
+  <details><summary>Hiraishin 的标签历史和浏览器的后退有什么区别？</summary><p>浏览器后退在同一个标签页里回到上一个网址；Hiraishin 记录的是你在标签页之间的切换轨迹，每个窗口独立，后退会切回上一个激活过的标签页。</p></details>
+  <details><summary>怎样用快捷键关闭当前标签右侧的所有标签？</summary><p>在 chrome://extensions/shortcuts 给“关闭右侧标签页”绑定任意组合键。固定标签和其他窗口不受影响。</p></details>
+  <details><summary>如何把网页上选中的文字直接发送给 ChatGPT 或 Claude？</summary><p>选中文字后通过轮盘、快捷键或右键菜单发送。目标是当前窗口最左侧的对话页，没有则新建。输入框已有草稿时会停下并提示。</p></details>
+  <details><summary>Chrome 扩展快捷键不支持减号，怎么支持 Ctrl+-？</summary><p>Hiraishin 在你授权的网页里监听按键作为“网页快捷键”；地址栏和 Chrome 内部页面仍用原生快捷键或面板。</p></details>
+  <details><summary>会上传我的浏览数据吗？</summary><p>不会。设置和轨迹只在本机；只有你主动填入或发送时，选中的文字才会交给你选择的 AI 网站。</p></details>
+  <details><summary>收费吗？</summary><p>所有功能可免费试用 14 天，从第一次成功执行动作开始计时。试用结束后一次性购买即可继续使用，不是订阅。试用结束时，设置和待处理内容都会保留。</p></details>
+
+  <h2 id="install">安装与开始使用</h2>
+  <p>当前为发布候选版本，Chrome 网上应用店链接将在上架后提供。已取得开发者提供的安装包时：解压 ZIP → 打开 chrome://extensions → 开启开发者模式 → 加载已解压的文件夹。</p>
+  <p>固定工具栏图标，先试着点击轮盘。进入设置允许网页访问后，即可使用网页手势。网页轮盘不适用于 Chrome 内部页、网上应用店等受限页面；发送到 AI 需要相应网站权限与已登录账号，网站界面变化可能影响适配。</p>
+  <footer>
+    <p>Hiraishin（飛雷神）由 <a href="https://github.com/taterboom">taterboom</a> 开发。<a href="privacy">隐私与数据说明</a>。需要 Chrome 121 或更新版本。</p>
+  </footer>
+</main>
+</body>
+</html>

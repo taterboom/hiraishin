@@ -214,6 +214,16 @@ sequenceDiagram
 - 样式沿用 v0.1 的视觉体系（`popup.css`、`options.css`），由 esbuild 随入口一起输出；动作图标与目标标记的样式放在 `ui/shared/action-mark.css`，面板与设置页共用一份定义，面板只调整尺寸。**同一选择器在同一作用域只能声明一次**：多轮追加曾让整块规则出现第二份并静默覆盖第一份，`npm run check` 现在按 `@media` 作用域分别校验重复选择器。
 - 设置页左侧导航的选中态只用背景填充与字重表示。**项目设计规则：圆角盒子禁止只在某一侧加描边**，那条边会露出圆角之外，看起来像渲染错误。需要方向性指示时，改用背景填充、或用不带圆角的独立元素画指示条。`npm run check` 会扫描两个样式表，发现同一规则里同时出现非零 `border-radius` 与单边 `border-*` 时直接失败。
 
+## 8.5 国际化（中 / 日 / 英）
+
+- **唯一入口**：`src/i18n.js` 的 `t(key, params)`。后台、`src/` 领域模块、React 页面与网页轮盘都用它；当前语言是模块状态，每个运行环境各有一份。`{name}` 为插值；`params.count === 1` 且存在 `<key>.one` 时用单数形式（只有英文需要）。缺失的键先回退英文，再原样显示键名，方便发现遗漏。
+- **词典**：`src/locales/{zh,ja,en}/{common,background,options,popup}.js`，按区域分文件，键名带区域前缀（`bg.`、`options.`、`popup.` / `overlay.` / `shared.`）。`common.js` 放 manifest 文案、动作名 `action.<id>`、分类 `category.<id>` 与 `action.mode.go|fill|send` 模板。中文是基准：`npm run check` 校验三种语言的键集合一致、占位符一致、各区域键不重复。
+- **语言从哪来**：设置 `locale` 为 `auto` / `zh` / `ja` / `en`，默认 `auto` 跟随 `chrome.i18n.getUILanguage()`；中文各变体都用简体词典，中日英以外回退英文（manifest `default_locale: en`）。后台对设置的每次读取都会应用语言，并在启动时先读一次；扩展页面在拿到设置视图后、渲染前应用；网页轮盘不能读设置，从 pageConfig 读取后台已解析的 `locale`，并且不改宿主网页的 `<html lang>`（`setLocale(locale, { labelDocument: false })`）。
+- **动作名在调用时生成**：`listActions()` 每次按当前语言算 `name`，不能把文案冻结在模块常量里；需要文案的常量一律改成函数（如 `lockedMessage()`、`statusMessage()`）。待处理选区只存状态码，展示时再翻译，所以切换语言后旧任务也跟着变。
+- **manifest**：名称、描述、工具栏标题与 20 条命令说明写成 `__MSG_*__`，构建时由 `common.js` 里 `manifest.*` 键生成 `dist/hiraishin/_locales/{en,zh_CN,ja}/messages.json`（`manifest.cmd.close-right` → `cmd_close_right`）。Chrome 快捷键页与商店标题只能跟随浏览器语言，不受设置页选择影响。
+- **其他**：购买请求带上当前语言，Stripe 结账页随之切换；隐私页按语言打包为 `privacy.html`、`zh/privacy.html`、`ja/privacy.html`，设置页链接对应语言；网站根目录为英文，`/zh/`、`/ja/` 为中日文，互相以 hreflang 关联。
+- **测试**：单元测试的 Chrome 替身把界面语言设为 `zh-CN`，现有中文断言不变；冒烟测试在临时副本里把默认语言改为中文，并单独断言切到日文和英文后 popup、动作名与 pageConfig 同步变化。
+
 ## 9. 构建、测试与发布
 
 | 命令 | 作用 |
@@ -225,7 +235,7 @@ sequenceDiagram
 | `npm run shot` | 用 Chrome for Testing 渲染扩展页面并按 3 倍截取单个元素，默认选择器需随当前轮盘结构指定；可传页面、选择器与输出路径。`SHOT_ACTIVE=<选择器>` 通过 CDP 强制真实的 `:active` 状态，`SHOT_PRE=<JS>` 可先布置页面状态 |
 | `npm run smoke` | 用 Chrome for Testing 验证核心交互：历史与标签操作、剪贴板、fixture 目标传送与草稿保护、快捷键与轮盘、危险操作确认、设置保存与本地统计 |
 | `npm run package` | check 后打 `dist/hiraishin-<version>.zip` |
-| `npm run try [-- local] [-- --fresh]` | 构建后只把 `dist/` 里的授权配置指向 Menkyo 测试环境（默认）或本地 Menkyo，并用 Chrome for Testing 打开设置页供手动测试购买与激活；浏览器配置保存在 `.artifacts/try-profile-<env>`，`--fresh` 清空。源码 `src/license-config.js` 保持正式值 |
+| `npm run try [-- local] [-- --fresh] [-- --lang=ja]` | 构建后复制到单独的 `dist/hiraishin-try/`，只在副本里把授权配置指向 Menkyo 测试环境（默认）或本地 Menkyo，并用 Chrome for Testing 打开设置页供手动测试购买与激活；浏览器配置保存在 `.artifacts/try-profile-<env>[-<lang>]`，`--fresh` 清空；`--lang` 设定测试浏览器的语言。源码 `src/license-config.js` 保持正式值 |
 | `npm run site:deploy` | 把 `site/` 发布到 `hiraishin.44san.com`（Cloudflare 静态资源） |
 
 `dist/hiraishin` 是唯一的加载与发布目录；仓库根目录不能直接作为扩展加载。

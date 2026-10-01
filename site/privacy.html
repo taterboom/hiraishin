@@ -1,40 +1,47 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>隐私与数据说明 · 飛雷神 Hiraishin</title>
+<title>Privacy and data · Hiraishin 飛雷神</title>
+<meta name="description" content="How the Hiraishin (飛雷神) Chrome extension handles settings, tab information, selected text and license data, and what each permission is for.">
+<link rel="canonical" href="https://hiraishin.44san.com/privacy">
+<link rel="alternate" hreflang="en" href="https://hiraishin.44san.com/privacy">
+<link rel="alternate" hreflang="zh-CN" href="https://hiraishin.44san.com/zh/privacy">
+<link rel="alternate" hreflang="ja" href="https://hiraishin.44san.com/ja/privacy">
+<link rel="alternate" hreflang="x-default" href="https://hiraishin.44san.com/privacy">
 <style>
-:root{font:16px/1.8 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;color:#292d25;background:#f7f6f0}body{max-width:760px;margin:48px auto;padding:0 24px 48px}h1{font-size:28px}h2{font-size:19px;margin-top:30px}a{color:#566645}small{color:#777b70}li{margin:8px 0}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #d7dbcf;padding:10px}
+:root{font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;color:#292d25;background:#f7f6f0}body{max-width:760px;margin:48px auto;padding:0 24px 48px}h1{font-size:28px}h2{font-size:19px;margin-top:30px}a{color:#566645}small{color:#777b70}li{margin:8px 0}table{border-collapse:collapse;width:100%;font-size:14px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #d7dbcf;padding:10px}.lang{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;font-size:13px;color:#777b70}.lang a{text-decoration:none}.lang a:hover{text-decoration:underline}.lang [aria-current]{color:#292d25;font-weight:600}
 </style>
 </head>
 <body>
-<h1>隐私与数据说明</h1>
-<p>飛雷神 Hiraishin 是通过轮盘、快捷键和右键菜单操作浏览器标签页及发送选中文字的 Chrome 扩展。</p>
-<p><small>适用版本：0.2.0 · 更新日期：2026-09-28</small></p>
-<h2>我们如何处理数据</h2>
-<p>扩展不包含广告或上传遥测，使用次数仅在本机累计。唯一与开发者服务器（授权服务）的通信用于购买、激活与验证授权，见下表“授权”一行；浏览记录、网页网址、标题、选中文字和操作次数都不会发给它。标签页信息与选区在本机处理；你主动选择“填入”或“发送”时，所选文字会被写入你配置的目标网站。“发送”还会尝试提交目标网站的输入框。</p>
-<table><thead><tr><th>数据</th><th>用途与保存时间</th></tr></thead><tbody>
-<tr><td>设置、目标网址和网页快捷键</td><td>保存在当前 Chrome 配置的本机扩展存储中，直到你修改、清除扩展数据或卸载扩展。</td></tr>
-<tr><td>操作次数</td><td>仅在本机保存动作标识、各入口的累计执行次数及统计起始时间；执行成功或失败都计数，不记录逐次事件、网页网址、标题或选中文字，不上传。可在设置页清空，卸载扩展时删除。</td></tr>
-<tr><td>标签页 ID、标题、网址和切换轨迹</td><td>用于切换、整理标签与定位目标。每个窗口最多记录 200 条访问轨迹，使用会话存储；浏览器重启后重新开始。</td></tr>
-<tr><td>主动选择的文字与来源信息</td><td>仅在你触发发送或填入时读取。未完成的任务暂存在会话存储中，最多保留 30 分钟供重试或复制；成功后清理，浏览器重启后不会保留。后台休眠可能使定时清理稍有延后。</td></tr>
-<tr><td>目标输入框及页面状态</td><td>用于判断是否登录、是否有草稿、是否正在生成，以及填入和提交是否成功。不要求你向扩展提供账号密码，不覆盖已有草稿。</td></tr>
-<tr><td>授权</td><td>试用起始时间保存在本机。购买时，扩展从授权服务获取一个随机领取凭据，并把它的摘要随付款交给 Stripe，用于在付款后领取授权码；付款、税费与收据由 Stripe 处理，授权服务只保存该笔付款的引用、付款邮箱（仅用于售后核对）和授权码的摘要与密文。授权码与服务端签发的授权凭据保存在本机，并同步到你登录的 Chrome 账号（<code>chrome.storage.sync</code>），以便重装或换电脑时恢复。激活时及之后大约每天一次，扩展把授权凭据发给授权服务以确认仍然有效；这些请求不包含任何浏览数据。</td></tr>
-<tr><td>键盘与鼠标事件</td><td>仅用于识别你设置的网页快捷键和轮盘手势，不保存输入记录。网页轮盘不会在输入框内触发。</td></tr>
+<nav class="lang" aria-label="Language"><a href="https://hiraishin.44san.com/">Hiraishin home</a><span><span aria-current="page">English</span> · <a href="zh/privacy.html" hreflang="zh-CN" lang="zh-CN">简体中文</a> · <a href="ja/privacy.html" hreflang="ja" lang="ja">日本語</a></span></nav>
+<h1>Privacy and data</h1>
+<p>Hiraishin (飛雷神) is a Chrome extension for working with browser tabs and sending selected text, using a wheel, shortcuts and the right-click menu.</p>
+<p><small>Applies to version 0.2.0 · Updated 2026-09-28</small></p>
+<h2>How we handle data</h2>
+<p>The extension contains no ads and sends no telemetry; usage counts are tallied only on your device. The only communication with a developer server (the license service) is for buying, activating and verifying a license, as described in the “License” row below; your browsing history, page URLs, titles, selected text and usage counts are never sent to it. Tab information and selections are processed on your device. When you choose “Fill” or “Send”, the selected text is written into the target website you configured. “Send” also tries to submit that website's input box.</p>
+<table><thead><tr><th>Data</th><th>Purpose and retention</th></tr></thead><tbody>
+<tr><td>Settings, target URLs and in-page shortcuts</td><td>Kept in the extension's local storage in your current Chrome profile until you change them, clear the extension's data or uninstall the extension.</td></tr>
+<tr><td>Usage counts</td><td>Only the action identifiers, the cumulative number of runs from each entry point and the time counting started are kept, on your device only. Both successful and failed runs are counted; individual events, page URLs, titles and selected text are not recorded, and nothing is uploaded. You can clear the counts in Settings, and they are deleted when you uninstall the extension.</td></tr>
+<tr><td>Tab IDs, titles, URLs and switching trail</td><td>Used to switch and arrange tabs and to locate targets. Up to 200 trail entries are kept per window, in session storage; the trail starts over when the browser restarts.</td></tr>
+<tr><td>Text you choose and its source</td><td>Read only when you trigger a send or fill. Unfinished tasks are held in session storage for up to 30 minutes so you can retry or copy them; they are cleared on success and are not kept after the browser restarts. If the background worker is asleep, the scheduled cleanup may run slightly late.</td></tr>
+<tr><td>Target input box and page state</td><td>Used to tell whether you are signed in, whether there is a draft, whether a reply is being generated, and whether filling and submitting succeeded. The extension never asks you for your account password and never overwrites an existing draft.</td></tr>
+<tr><td>License</td><td>The trial start time is stored on your device. When you buy, the extension gets a random claim credential from the license service and passes a digest of it to Stripe with the payment, so that the license key can be collected after payment. Stripe handles payment, tax and receipts; the license service stores only a reference to that payment, the payment email address (used only for after-sales verification), and a digest and an encrypted copy of the license key. The license key and the license token issued by the service are stored on your device and synced to the Chrome account you are signed in to (<code>chrome.storage.sync</code>), so they can be restored after reinstalling or on another computer. On activation and about once a day afterwards, the extension sends the license token to the license service to confirm it is still valid; these requests contain no browsing data.</td></tr>
+<tr><td>Keyboard and mouse events</td><td>Used only to recognize the in-page shortcuts and wheel gestures you set up; keystrokes are not stored. The in-page wheel does not trigger inside input fields.</td></tr>
 </tbody></table>
-<h2>第三方网站</h2>
-<p>文字直接交给你所选择的 ChatGPT、Claude 或自定义网站，开发者不接收该文字。第三方网站如何保存和使用文字，由该网站的隐私政策和你的账号设置决定。自定义网站由你自行配置。请仅发送你愿意交给该网站处理的内容。</p>
-<p>目标已有草稿、未登录或无法确认发送结果时，扩展会提示，并在适用时保留待处理选区供你处理。为避免重复发送，无法确认提交时不会自动重试发送。</p>
-<h2>权限及你的控制</h2>
+<h2>Third-party websites</h2>
+<p>Text goes directly to the ChatGPT, Claude or custom website you choose; the developer does not receive it. How a third-party website stores and uses the text is governed by that website's privacy policy and your account settings. Custom websites are configured by you. Only send content you are willing to have that website process.</p>
+<p>When the target already has a draft, you are not signed in, or the result of sending can't be confirmed, the extension tells you and, where applicable, keeps the pending selection for you to handle. To avoid sending twice, it does not automatically retry sending when a submission can't be confirmed.</p>
+<h2>Permissions and your controls</h2>
 <ul>
-<li>标签页与标签组权限：切换、移动、复制、关闭标签，并在移动时保留分组。</li>
-<li>本机与会话存储：保存设置、标签轨迹与待处理选区。</li>
-<li>脚本与当前标签授权：在你触发操作时读取选区、在目标网站填入文字。</li>
-<li>可选网站访问：经你允许后，网页轮盘和网页快捷键才在普通 HTTP / HTTPS 页面生效；AI 填入与发送需要目标网站权限。可在 Chrome 的扩展详情页调整或撤回网站访问权限。</li>
-<li>右键菜单、通知与闹钟：提供操作入口、提示失败状态、清理过期待处理内容。</li>
-<li>离屏文档与剪贴板写入：执行你触发的复制链接操作，不读取剪贴板。</li>
+<li>Tabs and tab groups: switch, move, duplicate and close tabs, and keep groups when moving.</li>
+<li>Local and session storage: store settings, the tab trail and pending selections.</li>
+<li>Scripting and active-tab access: read the selection when you trigger an action, and fill text into the target website.</li>
+<li>Optional site access: the in-page wheel and in-page shortcuts work on ordinary HTTP / HTTPS pages only after you allow it; filling and sending to AI requires access to the target website. You can change or revoke site access on the extension's details page in Chrome.</li>
+<li>Context menus, notifications and alarms: provide entry points, report failures and clean up expired pending items.</li>
+<li>Offscreen document and clipboard write: carry out the copy-link actions you trigger; the clipboard is never read.</li>
 </ul>
-<p>你可以关闭网页轮盘、清除网页快捷键、清除待处理选区或删除自定义目标。卸载扩展会移除其本机扩展存储；清除扩展中的记录不会删除已发送到第三方网站的内容，请在相应网站中管理。扩展不在无痕模式中运行。</p>
-<h2>联系与更新</h2>
-<p>如有隐私问题，请通过 Chrome 网上应用店中飛雷神 Hiraishin 页面提供的开发者联系方式联系作者。若你通过测试安装包使用，请联系提供安装包的开发者。数据处理方式变化时，本说明将与扩展一起更新。</p>
+<p>You can turn off the in-page wheel, clear in-page shortcuts, clear pending selections or delete custom targets. Uninstalling the extension removes its local extension storage. Clearing records in the extension does not delete content already sent to third-party websites; manage that on those websites. The extension does not run in Incognito mode.</p>
+<h2>Contact and updates</h2>
+<p>For privacy questions, contact the author through the developer contact details on the Hiraishin (飛雷神) page in the Chrome Web Store. If you are using a test install package, contact the developer who provided it. If the way data is handled changes, this notice will be updated along with the extension.</p>
 </body></html>

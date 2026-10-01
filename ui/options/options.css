@@ -6,11 +6,14 @@
 * { box-sizing: border-box; }
 body { margin: 0; }
 .page { max-width: 880px; margin: 0 auto; padding: 32px 24px 64px; }
-.brand { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.brand { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-bottom: 20px; }
 .brand-mark { display: block; width: 46px; height: 46px; flex: none; }
 h1 { margin: 0; display: flex; align-items: baseline; gap: 10px; font-size: 22px; letter-spacing: 1px; }
 h1 span { font-size: 10px; letter-spacing: 1.6px; color: var(--moss); }
 .brand p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+/* Language picker: pushed to the header's right edge; wraps under the title on narrow screens. */
+.brand-locale { display: flex; align-items: center; gap: 8px; margin-left: auto; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.brand-locale select { width: auto; height: 30px; padding: 4px 8px; color: #303a2c; }
 section { padding: 18px 0 0; }
 h2 { margin: 0 0 6px; font-size: 16px; }
 .lead { margin: 0 0 14px; color: var(--muted); font-size: 12px; }
@@ -221,3 +224,8 @@ dialog h4 { margin: 22px 0 2px; padding-top: 16px; border-top: 1px solid var(--l
 .license-actions { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 12px; }
 .license-activate { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 8px; }
 .license-activate .field { flex: 0 1 520px; margin: 0; }
+/* Every label occupies the same grid cell; only the active one is visible (and exposed to
+   assistive tech), and the cell is as wide as the widest label. */
+.stable-label { display: inline-grid; justify-items: center; }
+.stable-label > span { grid-area: 1 / 1; visibility: hidden; }
+.stable-label > span[data-active] { visibility: visible; }

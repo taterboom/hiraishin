@@ -4,6 +4,8 @@
 // Command key is "Command" and the physical Control key is "MacCtrl", matching the
 // vocabulary Chrome uses for extension commands.
 
+import { t } from './i18n.js';
+
 export const MODIFIER_ORDER = ['Ctrl', 'Alt', 'Shift', 'Command', 'MacCtrl'];
 export const MODIFIER_KEYS = ['Meta', 'Alt', 'Control', 'Shift'];
 const MODIFIERS = new Set(MODIFIER_ORDER);
@@ -183,7 +185,7 @@ export function reservedReason(combo, platform) {
   const normalized = normalizeCombo(combo);
   if (!normalized) return '';
   const list = platform === 'mac' ? RESERVED.mac : RESERVED.common;
-  if (list.includes(normalized)) return platform === 'mac' ? '这是 macOS 或 Chrome 的保留组合，网页收不到该按键。' : '这是 Chrome 的保留组合，网页收不到该按键。';
+  if (list.includes(normalized)) return t(platform === 'mac' ? 'bg.keys.reservedMac' : 'bg.keys.reserved');
   return '';
 }
 

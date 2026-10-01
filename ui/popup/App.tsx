@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { holdKeyLabel } from '../../src/keys.js';
+import { applyLocalePreference, t } from '../../src/i18n.js';
 import { api } from '../shared/api';
 import { unavailableReason } from '../shared/availability';
 import { Wheel, WHEEL_SIZE } from '../overlay/Wheel';
@@ -12,11 +13,11 @@ const NOTICE_DAYS = 3;
 
 /** Only when it matters: the last few trial days, or no longer allowed. Never mid-gesture. */
 function licenseNotice(license: LicenseView): string {
-  if (license.state === 'expired') return '试用已结束';
-  if (license.state === 'revoked') return '授权已撤销';
+  if (license.state === 'expired') return t('popup.license.expired');
+  if (license.state === 'revoked') return t('popup.license.revoked');
   if (license.state !== 'trial' || !license.trialEndsAt) return '';
   const days = Math.ceil((license.trialEndsAt - Date.now()) / 86_400_000);
-  return days <= NOTICE_DAYS ? `试用还剩 ${Math.max(days, 1)} 天` : '';
+  return days <= NOTICE_DAYS ? t('popup.license.daysLeft', { count: Math.max(days, 1) }) : '';
 }
 type Status = { message: string; kind: 'info' | 'error' } | null;
 
@@ -40,7 +41,11 @@ export function App() {
   }, [activeIndex, state, confirmation]);
 
   const refresh = useCallback(async () => {
-    if (windowId.current !== null) setState(await api.getState(windowId.current));
+    if (windowId.current === null) return;
+    const next = await api.getState(windowId.current);
+    // Before the first state arrives the browser language applies; from here on the saved choice.
+    applyLocalePreference(next.settings.locale);
+    setState(next);
   }, []);
   useEffect(() => {
     let live = true;
@@ -51,7 +56,7 @@ export function App() {
         windowId.current = current.id ?? null;
         await refresh();
       } catch (error) {
-        if (live) setFatal((error as Error).message || '扩展程序暂时不可用。');
+        if (live) setFatal((error as Error).message || t('popup.error.unavailable'));
       } finally {
         if (live) setBusy(false);
       }
@@ -69,7 +74,7 @@ export function App() {
       await refresh();
       if (result.message) setStatus({ message: result.message, kind: result.notify ? 'error' : 'info' });
     } catch (error) {
-      setStatus({ message: (error as Error).message || '操作失败，请重试。', kind: 'error' });
+      setStatus({ message: (error as Error).message || t('popup.error.failed'), kind: 'error' });
       await refresh().catch(() => {});
     } finally { inFlight.current = false; setBusy(false); }
   };
@@ -100,7 +105,7 @@ export function App() {
       const result = await api.confirmPopupClose(windowId.current, confirmation.token);
       if (confirmationVersion.current !== version) return;
       setConfirmation(null); setActiveIndex(null);
-      setStatus({ message: result.message || '已关闭标签页。', kind: 'info' });
+      setStatus({ message: result.message || t('popup.closed'), kind: 'info' });
       await refresh();
     } catch (error) {
       if (confirmationVersion.current === version) setConfirmation({ ...confirmation, token: null, busy: false, error: (error as Error).message });
@@ -109,7 +114,7 @@ export function App() {
   const slots = state?.settings.overlay.slots.map(id => state.actions.find(action => action.id === id && !action.panelInput) ?? null) ?? [];
   const unavailable = (action: ActionInfo) => state ? unavailableReason(action, {
     ...state, defaultTargetId: state.settings.defaultTargetId,
-  }) : '正在读取…';
+  }) : t('popup.loading');
   const activate = (index: number) => {
     const action = slots[index];
     if (!action || busy || unavailable(action)) return;
@@ -120,40 +125,41 @@ export function App() {
   return <main className="app" aria-busy={busy}>
     <header className="brand">
       <h1>飛雷神 <span>HIRAISHIN</span></h1>
-      <button className="icon-button" type="button" aria-label="打开设置" title="设置轮盘"
+      <button className="icon-button" type="button" aria-label={t('popup.settings.aria')} title={t('popup.settings.title')}
         onClick={() => { chrome.runtime.openOptionsPage(); window.close(); }}><SettingsGlyph /></button>
     </header>
     <div className="popup-wheel-stage" ref={stage}>
       {state && !confirmation && <div className="popup-wheel-frame">
         <Wheel slots={slots} activeIndex={activeIndex} position={{ left: WHEEL_SIZE / 2, top: WHEEL_SIZE / 2 }}
           showHint={hintVisible}
-          hint="点击执行" confirmHint="点击后确认" idleTitle={empty ? '还没有配置动作' : '选择一个动作'}
-          idleHint={empty ? '点击右上角设置' : '点击扇区执行'} unavailable={unavailable} rightCount={state.rightCount}
+          hint={t('popup.wheel.hint')} confirmHint={t('popup.wheel.confirmHint')}
+          idleTitle={empty ? t('popup.wheel.emptyTitle') : t('popup.wheel.idleTitle')}
+          idleHint={empty ? t('popup.wheel.emptyHint') : t('popup.wheel.idleHint')} unavailable={unavailable} rightCount={state.rightCount}
           busy={busy} onSelect={setActiveIndex} onActivate={activate} />
       </div>}
-      {!state && <p className="empty-message" role="status">{fatal || '正在读取轮盘…'}</p>}
+      {!state && <p className="empty-message" role="status">{fatal || t('popup.wheel.loading')}</p>}
     </div>
     {confirmation && <Confirmation state={confirmation} onCancel={cancelConfirmation} onConfirm={() => { void confirmClose(); }} />}
     {status && <p className="status" role="status" aria-live="polite" data-kind={status.kind}>{status.message}</p>}
-    {state && licenseNotice(state.license) && <aside className="setup-hint" aria-label="授权">
+    {state && licenseNotice(state.license) && <aside className="setup-hint" aria-label={t('popup.license.label')}>
       <strong>{licenseNotice(state.license)}</strong>
-      <p>购买或输入授权码后即可继续使用，设置和待处理内容都已保留。</p>
-      <button type="button" onClick={() => { chrome.runtime.openOptionsPage(); window.close(); }}>购买 / 激活</button>
+      <p>{t('popup.license.body')}</p>
+      <button type="button" onClick={() => { chrome.runtime.openOptionsPage(); window.close(); }}>{t('popup.license.button')}</button>
     </aside>}
-    {state && state.settings.overlay.enabled && !state.shortcuts.granted && <aside className="setup-hint" aria-label="启用网页轮盘">
-      <strong>在网页里也能用轮盘</strong>
-      <p>按住 {holdKeyLabel(state.settings.overlay.holdCode, state.platform)} 并甩动鼠标，松开执行。首次使用需允许网页访问。</p>
-      <button type="button" onClick={() => { chrome.runtime.openOptionsPage(); window.close(); }}>设置并启用</button>
+    {state && state.settings.overlay.enabled && !state.shortcuts.granted && <aside className="setup-hint" aria-label={t('popup.overlaySetup.label')}>
+      <strong>{t('popup.overlaySetup.title')}</strong>
+      <p>{t('popup.overlaySetup.body', { key: holdKeyLabel(state.settings.overlay.holdCode, state.platform) })}</p>
+      <button type="button" onClick={() => { chrome.runtime.openOptionsPage(); window.close(); }}>{t('popup.overlaySetup.button')}</button>
     </aside>}
     {Boolean(state?.tasks.length) && <details className="pending-selections">
-      <summary>待处理选区（{state!.tasks.length}）</summary>
+      <summary>{t('popup.tasks.summary', { count: state!.tasks.length })}</summary>
       {state!.tasks.map(task => <div className="pending-selection" key={task.id}>
         <p>{task.targetName} · {task.message}</p><p className="task-preview">{task.preview}</p>
-        <button type="button" disabled={busy} onClick={() => { void run(id => api.retryTask(task.id, id), true); }}>重试填入</button>
+        <button type="button" disabled={busy} onClick={() => { void run(id => api.retryTask(task.id, id), true); }}>{t('popup.tasks.retry')}</button>
         <button type="button" disabled={busy} onClick={() => { void run(async () => {
-          await navigator.clipboard.writeText(task.text); return { ok: true, message: '已复制待发送文字。' };
-        }); }}>复制文字</button>
-        <button type="button" disabled={busy} onClick={() => { void run(async () => { await api.removeTask(task.id); return { ok: true }; }); }}>清除</button>
+          await navigator.clipboard.writeText(task.text); return { ok: true, message: t('popup.tasks.copied') };
+        }); }}>{t('popup.tasks.copy')}</button>
+        <button type="button" disabled={busy} onClick={() => { void run(async () => { await api.removeTask(task.id); return { ok: true }; }); }}>{t('popup.tasks.clear')}</button>
       </div>)}
     </details>}
   </main>;

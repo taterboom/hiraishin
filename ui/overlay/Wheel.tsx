@@ -1,5 +1,6 @@
 // The radial menu itself: presentation only. Where it sits and which sector the pointer is
 // pointing at are decided in main.tsx, which owns the gesture.
+import { t } from '../../src/i18n.js';
 import { ActionIcon } from '../popup/icons';
 import type { ActionInfo } from '../shared/types';
 
@@ -53,7 +54,8 @@ export function slotPercent(index: number, count: number): { left: number; top: 
 }
 
 export function Wheel({ slots, activeIndex, position, hint, showHint = true, unavailable, rightCount,
-  onSelect, onActivate, allowEmpty = false, sectorLabel, busy = false, idleTitle = '松开取消', idleHint = '甩向某一瓣选择', confirmHint = '松开后确认' }: {
+  onSelect, onActivate, allowEmpty = false, sectorLabel, busy = false, idleTitle = t('overlay.wheel.idleTitle'), idleHint = t('overlay.wheel.idleHint'),
+  confirmHint = t('overlay.wheel.confirmHint') }: {
   /** One entry per sector, clockwise from twelve o'clock; null draws an empty wedge. */
   slots: (ActionInfo | null)[];
   activeIndex: number | null;
@@ -80,7 +82,7 @@ export function Wheel({ slots, activeIndex, position, hint, showHint = true, una
   const step = 360 / slots.length;
   return (
     <div className="backdrop">
-      <div className="wheel" style={{ left: `${position.left}px`, top: `${position.top}px` }} role="menu" aria-label="动作轮盘"
+      <div className="wheel" style={{ left: `${position.left}px`, top: `${position.top}px` }} role="menu" aria-label={t('overlay.wheel.label')}
         onMouseMove={onSelect ? event => { if (!(event.target as Element).closest('.sector')) onSelect(null); } : undefined}
         onBlur={onSelect ? event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onSelect(null); } : undefined}
         onMouseLeave={onSelect ? () => onSelect(null) : undefined}>
@@ -97,7 +99,7 @@ export function Wheel({ slots, activeIndex, position, hint, showHint = true, una
               data-dangerous={action?.kind === 'close-right'}
               data-empty={!action} data-disabled={Boolean(action && unavailable(action))}
               role={onActivate && (action || allowEmpty) ? 'menuitem' : undefined}
-              aria-label={onActivate && (action || allowEmpty) ? sectorLabel?.(index) ?? (action ? `${action.name}${unavailable(action) ? `：${unavailable(action)}` : ''}` : '空分区') : undefined}
+              aria-label={onActivate && (action || allowEmpty) ? sectorLabel?.(index) ?? (action ? (unavailable(action) ? t('overlay.wheel.unavailableLabel', { name: action.name, reason: unavailable(action) }) : action.name) : t('overlay.wheel.emptySector')) : undefined}
               aria-disabled={onActivate && (action || allowEmpty) ? busy || Boolean(action && unavailable(action)) : undefined}
               tabIndex={onActivate && (action || allowEmpty) ? (busy ? -1 : 0) : undefined}
               onMouseEnter={onSelect ? () => onSelect(action || allowEmpty ? index : null) : undefined}
@@ -135,7 +137,7 @@ export function Wheel({ slots, activeIndex, position, hint, showHint = true, una
         {/* Keep the centre clear during quick gestures; dwell reveals the action and release hint. */}
         {showHint && <div className="hub" data-active={Boolean(active)} data-dangerous={active?.kind === 'close-right'}>
           <span className="hub-name">{active?.kind === 'close-right' && rightCount !== undefined
-            ? `关闭右侧 ${rightCount} 个标签页` : active ? active.name : idleTitle}</span>
+            ? t('overlay.wheel.closeRight', { count: rightCount }) : active ? active.name : idleTitle}</span>
           <span className="hub-hint">{active ? (reason || (active.kind === 'close-right' ? confirmHint : hint)) : idleHint}</span>
         </div>}
       </div>

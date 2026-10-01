@@ -4,18 +4,25 @@
 //   npm run try            online test environment (https://menkyo-test.44san.com)
 //   npm run try -- local   your local Menkyo (npm run dev in the menkyo repo, port 8787)
 //   npm run try -- --fresh start from a clean browser profile (new install, no trial, no license)
+//   npm run try -- --lang=ja  browser language (zh-CN / ja / en …): Stripe checkout and the thanks
+//                          page follow it while the extension does not pass a language itself
 //
-// Only dist/ is changed: src/license-config.js keeps the production values, so nothing here can
+// Only dist/hiraishin-try is changed: src/license-config.js keeps the production values, so nothing here can
 // leak into a release. The browser profile is kept in .artifacts/try-profile-<env> between runs.
 import { createHash } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
-import { readdir, rm, writeFile, realpath, mkdir } from 'node:fs/promises';
+import { cp, readdir, readlink, rm, writeFile, realpath, mkdir } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
 const BACKENDS = { test: 'https://menkyo-test.44san.com', local: 'http://localhost:8787' };
 const args = process.argv.slice(2);
 const target = args.find(arg => !arg.startsWith('--')) ?? 'test';
+const lang = args.find(arg => arg.startsWith('--lang='))?.slice('--lang='.length) ?? '';
+if (lang && !/^[A-Za-z]{2,3}(-[A-Za-z]{2,4})?$/.test(lang)) {
+  console.error(`Invalid --lang "${lang}". Examples: --lang=ja, --lang=zh-CN, --lang=en`);
+  process.exit(1);
+}
 if (!BACKENDS[target]) {
   console.error(`Unknown backend "${target}". Use: ${Object.keys(BACKENDS).join(' | ')}`);
   process.exit(1);
@@ -33,9 +40,15 @@ try {
   process.exit(1);
 }
 
+// The browser loads its own copy: `npm run build` / `check` / `smoke` recreate dist/hiraishin, and
+// doing that under a running try session swapped in production config (no purchase button) while
+// the old service worker kept running, so newer settings such as the language were dropped.
 execFileSync(process.execPath, ['scripts/build.mjs'], { cwd: root, stdio: 'ignore' });
-await writeFile(path.join(root, 'dist/hiraishin/src/license-config.js'),
-  `// Written by scripts/try.mjs for the ${target} backend; the next build restores src/license-config.js.\n`
+const TRY_DIR = path.join(root, 'dist/hiraishin-try');
+await rm(TRY_DIR, { recursive: true, force: true });
+await cp(path.join(root, 'dist/hiraishin'), TRY_DIR, { recursive: true });
+await writeFile(path.join(TRY_DIR, 'src/license-config.js'),
+  `// Written by scripts/try.mjs for the ${target} backend; the next \`npm run try\` rewrites this copy.\n`
   + `export const MENKYO_URL = '${url}';\nexport const MENKYO_PUBLIC_JWK = ${JSON.stringify(jwk)};\n`);
 
 async function findChrome() {
@@ -59,16 +72,35 @@ if (!chrome) {
   process.exit(1);
 }
 
-const extension = await realpath(path.join(root, 'dist/hiraishin'));
+const extension = await realpath(TRY_DIR);
 const hex = createHash('sha256').update(extension).digest('hex').slice(0, 32);
 const id = [...hex].map(c => String.fromCharCode(97 + parseInt(c, 16))).join('');
-const profile = path.join(root, `.artifacts/try-profile-${target}`);
+// Chrome remembers language preferences in the profile, so each language gets its own.
+const profile = path.join(root, `.artifacts/try-profile-${target}${lang ? `-${lang}` : ''}`);
+// A second launch on a profile that is already open does not start a new browser: Chrome hands the
+// URL to the running one, which keeps the extension it loaded at its own start (an older build, or
+// another path with another id), so the settings page opens blank. Refuse instead of doing that.
+async function runningPid(dir) {
+  try {
+    const pid = Number((await readlink(path.join(dir, 'SingletonLock'))).split('-').pop());
+    if (!pid) return 0;
+    process.kill(pid, 0);
+    return pid;
+  } catch { return 0; }
+}
+const running = await runningPid(profile);
+if (running) {
+  console.error(`The try browser for ${path.relative(root, profile)} is still open (pid ${running}).
+Quit that Chrome for Testing window (⌘Q) and run this again; a second launch would reuse it with the old extension.`);
+  process.exit(1);
+}
 if (args.includes('--fresh')) await rm(profile, { recursive: true, force: true });
 await mkdir(profile, { recursive: true });
 
 spawn(chrome, [`--user-data-dir=${profile}`, `--load-extension=${extension}`, `--disable-extensions-except=${extension}`,
+  ...(lang ? [`--lang=${lang}`, `--accept-lang=${lang}`] : []),
   '--no-first-run', '--no-default-browser-check', `chrome-extension://${id}/options.html`], { detached: true, stdio: 'ignore' }).unref();
 
-console.log(`Opened Hiraishin settings against ${url}
+console.log(`Opened Hiraishin settings against ${url}${lang ? ` (browser language ${lang})` : ''}
   Test card: 4242 4242 4242 4242 · any future date · any CVC
   Profile:   ${path.relative(root, profile)} (kept between runs; add --fresh to reset)`);

@@ -1,6 +1,7 @@
 // Selection transfer orchestration (spec §7, §8.3). One task per trigger; tasks for the
 // same window and target run in order so rapid selections never overwrite each other.
 import { getTarget, supports } from './targets.js';
+import { t } from './i18n.js';
 
 export const TASKS_KEY = 'transferTasks';
 export const CLEANUP_ALARM = 'hiraishin-task-cleanup';
@@ -8,21 +9,10 @@ export const RETENTION_MS = 30 * 60 * 1000;
 const LOAD_TIMEOUT_MS = 20000;
 const READY_TIMEOUT_MS = 15000;
 
-export const STATUS_MESSAGES = {
-  'no-selection': '没有选中文字，未执行。',
-  'needs-permission': '需要先在设置页允许访问该网站，才能填入或发送。',
-  unsupported: '该目标只支持前往，不支持填入或发送。',
-  login: '目标网站尚未登录。选区已保留，可在面板中重试。',
-  generating: '目标正在生成回答，暂不能接收新消息。选区已保留。',
-  draft: '输入框已有草稿，未自动发送。选区已保留，可改用“填入”追加。',
-  'not-ready': '目标页面的输入框未就绪或不兼容。选区已保留，可重试填入或手动复制。',
-  'fill-failed': '未能把选区写入输入框。选区已保留，可手动复制。',
-  'cannot-submit': '内容已填入，但页面未接受发送，请手动发送。',
-  uncertain: '内容已填入，但无法确认是否已提交，未自动重试。',
-  'target-gone': '目标标签页已关闭，操作结束。',
-  'source-gone': '来源标签页已关闭，操作结束。',
-  'selection-blocked': '当前页面无法读取选区（受限页面或未授权），未执行。',
-};
+// Outcomes that carry a message for the user; the text is looked up when it is shown.
+const MESSAGE_STATUSES = new Set(['no-selection', 'needs-permission', 'unsupported', 'login', 'generating', 'draft',
+  'not-ready', 'fill-failed', 'cannot-submit', 'uncertain', 'target-gone', 'source-gone', 'selection-blocked']);
+export const statusMessage = status => (MESSAGE_STATUSES.has(status) ? t(`bg.transfer.${status}`) : '');
 const STALE_RUNNING_MS = 5 * 60 * 1000;
 const FAILED = new Set(['login', 'generating', 'draft', 'not-ready', 'fill-failed', 'cannot-submit', 'uncertain', 'needs-permission']);
 
@@ -125,10 +115,10 @@ export function createTransfer(api, { targets, settingsStore, readSelection, now
     const { task } = job;
     const finish = async (status, extra = {}) => {
       if (task) {
-        if (FAILED.has(status)) await updateTask(task.id, { state: 'failed', status, failedAt: now(), message: STATUS_MESSAGES[status] });
+        if (FAILED.has(status)) await updateTask(task.id, { state: 'failed', status, failedAt: now(), message: statusMessage(status) });
         else await removeTask(task.id);
       }
-      return { status, message: STATUS_MESSAGES[status] ?? '', notify: FAILED.has(status) || status === 'target-gone', taskId: task?.id, ...extra };
+      return { status, message: statusMessage(status), notify: FAILED.has(status) || status === 'target-gone', taskId: task?.id, ...extra };
     };
     try {
       return await perform(job, finish);
@@ -194,10 +184,10 @@ export function createTransfer(api, { targets, settingsStore, readSelection, now
   async function run({ mode, targetId, ctx }) {
     const settings = await settingsStore.get();
     const target = getTarget(settings, targetId);
-    if (!target) return { status: 'unsupported', message: '未找到该目标。', notify: true };
-    if (!supports(target, mode === 'go' ? 'navigate' : mode)) return { status: 'unsupported', message: STATUS_MESSAGES.unsupported, notify: true };
+    if (!target) return { status: 'unsupported', message: t('bg.transfer.targetNotFound'), notify: true };
+    if (!supports(target, mode === 'go' ? 'navigate' : mode)) return { status: 'unsupported', message: statusMessage('unsupported'), notify: true };
     let source;
-    try { source = await api.tabs.get(ctx.tabId); } catch { return { status: 'source-gone', message: STATUS_MESSAGES['source-gone'], notify: true }; }
+    try { source = await api.tabs.get(ctx.tabId); } catch { return { status: 'source-gone', message: statusMessage('source-gone'), notify: true }; }
 
     let text = '';
     let task = null;
@@ -208,13 +198,13 @@ export function createTransfer(api, { targets, settingsStore, readSelection, now
       text = selection.text;
       if (!text.trim()) {
         const status = selection.source === 'blocked' ? 'selection-blocked' : 'no-selection';
-        return { status, message: STATUS_MESSAGES[status], notify: true };
+        return { status, message: statusMessage(status), notify: true };
       }
       const tasks = await loadTasks();
       task = {
         id: `task-${now()}-${Math.random().toString(36).slice(2, 8)}`, mode, targetId: target.id, targetName: target.name,
         text, sourceTabId: source.id, windowId: source.windowId, state: 'running', createdAt: now(),
-        formatNote: selection.source === 'context-menu' ? '通过右键菜单读取，格式可能有变化。' : '',
+        formatNote: selection.source === 'context-menu' ? t('bg.transfer.formatNote') : '',
       };
       tasks[task.id] = task;
       await saveTasks(tasks);
@@ -232,7 +222,7 @@ export function createTransfer(api, { targets, settingsStore, readSelection, now
   async function retry(taskId, ctx) {
     const tasks = await loadTasks();
     const task = tasks[taskId];
-    if (!task) throw new Error('这条待处理选区已不存在。');
+    if (!task) throw new Error(t('bg.transfer.taskGone'));
     delete tasks[taskId];
     await saveTasks(tasks);
     let tabId = ctx.tabId;
@@ -244,7 +234,7 @@ export function createTransfer(api, { targets, settingsStore, readSelection, now
     const tasks = await loadTasks();
     return Object.values(tasks).filter(task => task.state === 'failed')
       .sort((a, b) => b.createdAt - a.createdAt)
-      .map(task => ({ id: task.id, mode: task.mode, targetName: task.targetName, status: task.status, message: task.message,
+      .map(task => ({ id: task.id, mode: task.mode, targetName: task.targetName, status: task.status, message: statusMessage(task.status) || task.message,
         text: task.text, preview: task.text.trim().slice(0, 80), createdAt: task.createdAt, failedAt: task.failedAt }));
   }
 
