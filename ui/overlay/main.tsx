@@ -44,6 +44,12 @@ if (!guard.__hiraishinOverlay) {
   const origin = { x: 0, y: 0 };
   let opening = false;
   const pointer = { x: 0, y: 0 };
+  /** Whether `pointer` is where the mouse really is. A page only learns the position from mouse
+   *  events, so it is unknown until the mouse first moves over a freshly loaded page, and stale
+   *  after the tab or window was left (the mouse moved elsewhere meanwhile). */
+  let pointerKnown = false;
+  /** Armed while the position was unknown: the origin is the first sample of the movement. */
+  let originPending = false;
   let config = { enabled: false, holdCode: 'auto', holdMs: 0 };
   /** The hold key resolved for this platform: `auto` cannot be compared against an event. */
   const holdKey = () => resolveHoldCode(config.holdCode, navigator.platform.startsWith('Mac') ? 'mac' : 'other');
@@ -208,12 +214,39 @@ if (!guard.__hiraishinOverlay) {
     render();
   }
 
+  // Armed with an unknown position, the wheel must open where the flick began, not at (0, 0) or
+  // wherever the mouse was last seen. No API reports the cursor before it moves, so the closest
+  // point is the movement's first sample: pointerrawupdate delivers samples before they are
+  // coalesced into a frame (secure contexts only), and pointermove carries the coalesced ones.
+  // Both are listened to only while that origin is pending, so ordinary pages pay nothing.
+  const earlySample = (event: Event) => {
+    const move = event as PointerEvent;
+    if (!armed || !originPending || !move.isTrusted || move.pointerType !== 'mouse') return;
+    const first = move.getCoalescedEvents?.()[0] ?? move;
+    resolveOrigin(first.clientX, first.clientY);
+  };
+  const SAMPLE_EVENTS = ['pointerrawupdate', 'pointermove'];
+  function awaitOrigin() {
+    originPending = true;
+    for (const type of SAMPLE_EVENTS) window.addEventListener(type, earlySample, { capture: true, passive: true });
+  }
+  function resolveOrigin(x: number, y: number) {
+    origin.x = x;
+    origin.y = y;
+    originPending = false;
+    for (const type of SAMPLE_EVENTS) window.removeEventListener(type, earlySample, { capture: true });
+  }
+
   // Passive: this handler never cancels the event, and saying so keeps pointer moves on the
   // compositor's fast path on every page the user visits, panel open or not.
   document.addEventListener('mousemove', event => {
     pointer.x = event.clientX;
     pointer.y = event.clientY;
+    pointerKnown = true;
     if (open) { pick(event.clientX, event.clientY); return; }
+    // No earlier sample reached us (an insecure page has no pointerrawupdate): this event is the
+    // first known point of the movement, so it becomes the origin rather than opening the wheel.
+    if (armed && originPending) { resolveOrigin(event.clientX, event.clientY); return; }
     // Armed and the mouse starts moving: that is the flick, and it opens the wheel.
     if (armed && !opening && Math.hypot(pointer.x - origin.x, pointer.y - origin.y) >= FLICK_START) {
       opening = true;
@@ -246,8 +279,8 @@ if (!guard.__hiraishinOverlay) {
     const arm = () => {
       armTimer = 0;
       armed = true;
-      origin.x = pointer.x;
-      origin.y = pointer.y;
+      if (pointerKnown) resolveOrigin(pointer.x, pointer.y);
+      else awaitOrigin();
     };
     // Arm immediately by default; movement reveals the wheel.
     if (config.holdMs > 0) armTimer = window.setTimeout(arm, config.holdMs);
@@ -258,6 +291,7 @@ if (!guard.__hiraishinOverlay) {
     gestureVersion++;
     if (armTimer) { clearTimeout(armTimer); armTimer = 0; }
     armed = false;
+    if (originPending) resolveOrigin(origin.x, origin.y);
   };
   document.addEventListener('keyup', event => {
     if (!event.isTrusted || !isHoldKey(event, holdKey())) return;
@@ -294,6 +328,7 @@ if (!guard.__hiraishinOverlay) {
       consumeClick = true;
       pointer.x = event.clientX;
       pointer.y = event.clientY;
+      pointerKnown = true;
       pick(event.clientX, event.clientY);
       run(activeIndex);
     }
@@ -307,8 +342,10 @@ if (!guard.__hiraishinOverlay) {
   }, true);
   document.addEventListener('contextmenu', event => { if (open || confirmation) { event.preventDefault(); hide(); } }, true);
   document.addEventListener('keydown', event => { if (open && event.key === 'Escape') { event.preventDefault(); hide(); } }, true);
-  window.addEventListener('blur', () => { cancelArm(); hide(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) hide(); });
+  // Leaving the window, the tab, or the page itself means the mouse may be anywhere next time.
+  window.addEventListener('blur', () => { pointerKnown = false; cancelArm(); hide(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { pointerKnown = false; hide(); } });
+  document.addEventListener('mouseout', event => { if (!event.relatedTarget) pointerKnown = false; }, { capture: true, passive: true });
 
   const apply = (value: { overlay?: typeof config } | undefined) => {
     const next = { ...config, ...(value?.overlay ?? {}) };

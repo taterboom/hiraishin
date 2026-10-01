@@ -763,6 +763,35 @@ try {
   const afterCancel = await withTimeout(overlayPage.eval(`document.querySelector('[data-hiraishin-overlay]').style.display`), 5000, 'read cancel state');
   afterCancel === 'none' ? pass('right-click cancels the panel') : fail('overlay cancel', afterCancel);
 
+  // A freshly opened page has never seen the mouse, so the position is unknown when the key goes
+  // down. The wheel must open where the movement began, not at (0, 0) pushed into the top-left.
+  const freshWheelTab = await sw.eval(`chrome.tabs.create({ windowId: ${windowId}, url: '${WWW}/fixture.html?title=FreshWheel', active: true }).then(t => t.id)`);
+  const freshWheel = await attach(await waitTarget(t => t.type === 'page' && t.url.includes('title=FreshWheel')));
+  await freshWheel.send('Emulation.setFocusEmulationEnabled', { enabled: true });
+  for (let i = 0; i < 40 && !(await freshWheel.eval(`Boolean(document.querySelector('[data-hiraishin-overlay]')) || document.readyState === 'complete'`)); i++) await sleep(100);
+  await sleep(300);
+  const freshKey = type => freshWheel.send('Input.dispatchKeyEvent', { type, key: hold.key, code: hold.code,
+    windowsVirtualKeyCode: hold.windowsVirtualKeyCode, modifiers: type === 'keyDown' ? hold.modifiers : 0 });
+  const freshMove = (x, y) => freshWheel.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, buttons: 0, modifiers: hold.modifiers });
+  await freshKey('keyDown');
+  await freshMove(openSpace.x, openSpace.y);
+  await sleep(60);
+  await freshMove(openSpace.x + 12, openSpace.y + 2);
+  await sleep(400);
+  const freshBox = await withTimeout(wheelBox(freshWheel), 5000, 'measure the fresh-page wheel');
+  await freshWheel.send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27, modifiers: hold.modifiers });
+  await freshKey('keyUp');
+  (Math.abs(freshBox.centerX - openSpace.x) <= 3 && Math.abs(freshBox.centerY - openSpace.y) <= 3)
+    ? pass('on a page the mouse has not moved over yet, the wheel opens where the flick began')
+    : fail('fresh-page wheel origin', JSON.stringify({ freshBox, expected: openSpace }));
+  // Close it through the protocol: awaiting chrome.tabs.remove from the worker hangs here.
+  await freshWheel.send('Page.close', {}, 5000).catch(() => {});
+  freshWheel.close();
+  void freshWheelTab;
+  await sw.eval(`chrome.tabs.update(${overlayTab}, { active: true })`);
+  await overlayPage.send('Page.bringToFront');
+  await sleep(300);
+
   // Modifier gestures work in editors, but holding without moving remains inert. Add the other
   // editing surfaces here so the shared fixture stays unchanged for the rest of the suite.
   // The blur/visibility cancellation checks above use real focus. Keep this editor-only section
