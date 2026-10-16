@@ -15,6 +15,7 @@ export default {
   'options.permissionDenied': '未获得权限。',
   'options.needModifier': '需要 Ctrl / Alt / Command 等修饰键加一个按键。',
   'options.footer.privacy': '隐私与数据说明',
+  'options.footer.feedback': '想要什么功能',
 
   'options.capability.navigate': '仅前往',
   'options.capability.fill': '前往 + 填入',

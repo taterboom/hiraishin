@@ -15,6 +15,7 @@ export default {
   'options.permissionDenied': '権限を取得できませんでした。',
   'options.needModifier': 'Ctrl / Alt / Command などの修飾キーと、もう 1 つのキーが必要です。',
   'options.footer.privacy': 'プライバシーとデータについて',
+  'options.footer.feedback': '欲しい機能を伝える',
 
   'options.capability.navigate': '開くのみ',
   'options.capability.fill': '開く + 入力',

@@ -15,6 +15,7 @@ export default {
   'options.permissionDenied': 'Permission not granted.',
   'options.needModifier': 'Needs a modifier such as Ctrl / Alt / Command plus one key.',
   'options.footer.privacy': 'Privacy and data',
+  'options.footer.feedback': 'Request a feature',
 
   'options.capability.navigate': 'Go to only',
   'options.capability.fill': 'Go to + fill',

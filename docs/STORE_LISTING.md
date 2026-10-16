@@ -63,6 +63,9 @@
 • 界面支持简体中文、日语和英语。
 • 所有功能免费试用 14 天，从第一次成功执行动作开始计时；之后一次性购买，不是订阅。
 
+想要什么功能
+告诉我们：https://koe.44san.com/hiraishin?lang=zh 。新的动作大多来自用户的需求。
+
 数据与隐私
 设置和标签轨迹保存在本机。扩展不收集浏览数据，没有统计或广告；唯一的开发者服务器是授权服务，只用于购买、激活和校验授权，请求中不含浏览数据。只有你主动填入或发送时，文字才交给你选择的目标网站。待处理选区临时保存在浏览器会话中，最多 30 分钟供恢复。第三方网站的数据使用由其隐私政策和你的账号设置决定。
 
@@ -112,6 +115,9 @@ Option（Windows / Linux では Alt）を押しながらマウスを振ってア
 • 画面は日本語・英語・簡体字中国語に対応しています。
 • すべての機能を 14 日間無料でお試しいただけます（初めて操作が成功したときから開始）。その後は一度の購入で使い続けられます。サブスクリプションではありません。
 
+欲しい機能を伝える
+https://koe.44san.com/hiraishin?lang=ja からお知らせください。新しい動作の多くはユーザーの要望から生まれています。
+
 データとプライバシー
 設定とタブ履歴は端末内に保存されます。閲覧データは収集せず、分析や広告もありません。開発者のサーバーはライセンスサービスのみで、ライセンスの購入・有効化・確認にだけ使われ、閲覧データは含まれません。選択テキストは、あなたが入力や送信を実行したときにだけ、選んだ送信先サイトに渡されます。保留中の選択テキストは、復元のためにブラウザのセッション内に最大 30 分間だけ一時保存されます。第三者のサイトでのデータの利用は、そのサイトのプライバシーポリシーとアカウントの設定によります。
 
@@ -160,6 +166,9 @@ Permissions and limits
 • 20 browser commands can be bound in Chrome's keyboard shortcut settings; in-page shortcuts can use combinations such as Ctrl+-. Close actions triggered by native shortcuts run immediately, while the wheel asks you to confirm.
 • Interface in English, Simplified Chinese and Japanese.
 • Every feature is free to try for 14 days, starting the first time an action runs successfully; after that, a one-time purchase. No subscription.
+
+Request a feature
+Tell us at https://koe.44san.com/hiraishin?lang=en — most new actions start as user requests.
 
 Data and privacy
 Settings and the tab trail are stored on your device. The extension collects no browsing data and has no analytics or ads. Its only developer server is the license service, used to buy, activate and verify a license, and those requests contain no browsing data; text goes to the target website you chose only when you explicitly fill or send it. Pending selections are kept temporarily in the browser session for up to 30 minutes so you can recover them. How third-party websites use your data is governed by their privacy policies and your account settings.

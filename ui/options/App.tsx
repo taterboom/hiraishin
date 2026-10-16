@@ -20,6 +20,9 @@ const capabilityLabel = (capability: Capability) => t(`options.capability.${capa
 type LocalePreference = Settings['locale'];
 // The privacy notice is published once per language; English sits at the root.
 const PRIVACY_PAGE: Record<string, string> = { zh: 'zh/privacy.html', ja: 'ja/privacy.html', en: 'privacy.html' };
+// 44san's shared feedback service (Koe). The link carries only the version and interface language;
+// nothing is sent unless the user writes and submits the form on that page.
+const feedbackUrl = () => `https://koe.44san.com/hiraishin?v=${encodeURIComponent(chrome.runtime.getManifest().version)}&lang=${getLocale()}`;
 
 /** Switch the page's language before React renders the view that carries the preference. */
 function applyPageLocale(preference: LocalePreference | undefined) {
@@ -118,6 +121,7 @@ export function App() {
       )}
       <UsageStats actions={view.actions} />
       <footer className="settings-footer"><span>飛雷神 {chrome.runtime.getManifest().version}</span>
+        <a href={feedbackUrl()} target="_blank" rel="noreferrer">{t('options.footer.feedback')}</a>
         <a href={PRIVACY_PAGE[getLocale()] ?? PRIVACY_PAGE.en} target="_blank" rel="noreferrer">{t('options.footer.privacy')}</a>
       </footer>
     </main>
