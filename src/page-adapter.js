@@ -16,9 +16,20 @@
       loginMarkers: [],
     },
     chatgpt: {
-      input: ['#prompt-textarea', 'div[contenteditable="true"][data-placeholder]', 'textarea[data-id]'],
-      send: ['button[data-testid="send-button"]', 'button[aria-label="Send prompt"]'],
-      stop: ['button[data-testid="stop-button"]', 'button[aria-label="Stop streaming"]', 'button[aria-label="Stop generating"]'],
+      // ChatGPT dropped the `prompt-textarea` id and the placeholder attribute in October 2026;
+      // what is left is a bare ProseMirror editor, the same one Claude uses. The old selectors
+      // stay as a fallback for pages still serving the previous composer.
+      input: ['div.ProseMirror[contenteditable="true"]', '#prompt-textarea', 'div[contenteditable="true"][data-placeholder]', 'textarea[data-id]'],
+      // The composer's buttons lost their test ids too; they are now labelled "Send" and "Stop".
+      // Those labels follow the ChatGPT UI language, so the send button also has a structural
+      // fallback: it is the only submit button in the composer's form. The stop button has no
+      // such fallback, and a non-English UI may hide the "answering right now" state from us.
+      send: ['button[aria-label="Send"]', 'button[data-testid="send-button"]', 'button[aria-label="Send prompt"]', 'form button[type="submit"]'],
+      stop: ['button[aria-label="Stop"]', 'button[data-testid="stop-button"]', 'button[aria-label="Stop streaming"]', 'button[aria-label="Stop generating"]'],
+      // The per-message markers are gone as well: no `data-message-author-role`, no `article`,
+      // no `conversation-turn` test id anywhere, even right after a message was sent. Until a
+      // replacement is identified, submission is confirmed by the composer emptying while the
+      // stop button is up, which `submit()` already treats as evidence.
       userMessage: ['[data-message-author-role="user"]'],
       loginPaths: ['/auth'],
       loginMarkers: ['[data-testid="login-button"]', '[data-testid="welcome-login-button"]'],

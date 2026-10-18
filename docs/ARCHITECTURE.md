@@ -166,6 +166,7 @@ sequenceDiagram
 - 同一窗口同一目标的任务串行；不同目标互不阻塞；历史队列不受传送等待影响。
 - 适配器在页面导航后会丢失（隔离世界重置），`probe` 返回 `null` 时重新注入。
 - 只有“消息数增加”或“输入框在提交后清空”算已提交；否则报告 `uncertain`，绝不自动重试提交。
+- 2026-10 ChatGPT 改版后，页面上已找不到任何按条消息的标记（`data-message-author-role`、`article`、`conversation-turn` 全部为 0），“消息数增加”这条证据对它失效，实际走的是“输入框清空且停止按钮在场”。输入框变成裸的 `div.ProseMirror`，发送 / 停止按钮只剩 `aria-label="Send"` / `"Stop"`（跟随 ChatGPT 界面语言，发送另有 `form button[type="submit"]` 作为结构兜底）。
 - 失败任务带 `failedAt`，用 `chrome.alarms` 在 30 分钟后清理；卡在 `running` 超过 5 分钟的任务在下次唤醒时清理。
 
 ## 6. 存储
