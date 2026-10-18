@@ -12,6 +12,8 @@
     "package": "node scripts/package.mjs",
     "smoke": "node scripts/smoke.mjs",
     "shot": "node scripts/screenshot.mjs",
+    "promo:record": "node scripts/promo/record.mjs",
+    "promo:render": "node scripts/promo/render.mjs",
     "site:deploy": "npx wrangler@4 deploy -c site/wrangler.jsonc",
     "try": "node scripts/try.mjs"
   },

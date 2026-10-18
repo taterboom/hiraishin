@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>产品设计文档 · 新版结账流程</title>
+<style>
+  body { margin: 0; font: 17px/1.75 "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; color: #24292f; background: #fff; }
+  header { height: 56px; border-bottom: 1px solid #e6e8eb; display: flex; align-items: center; padding: 0 40px; gap: 10px; color: #57606a; font-size: 14px; }
+  header b { color: #24292f; }
+  main { max-width: 760px; margin: 48px auto; padding: 0 32px; }
+  h1 { font-size: 34px; margin: 0 0 6px; }
+  .meta { color: #8c959f; font-size: 14px; margin-bottom: 32px; }
+  h2 { font-size: 22px; margin: 36px 0 8px; }
+  mark { background: #fbe7c2; padding: 0 2px; }
+  li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<header><b>团队文档</b> / 产品 / 结账</header>
+<main>
+  <h1>新版结账流程</h1>
+  <div class="meta">产品设计文档 · 更新于 10 月 16 日</div>
+  <p>本次改版把结账从三步合并为一步：收货地址、配送方式和支付方式在同一页完成。目标是<mark>把移动端的结账放弃率降低 15%</mark>，同时不影响客单价。</p>
+  <h2>背景</h2>
+  <p>数据显示，超过四成用户在第二步「配送方式」离开。访谈中最常见的原因是页面跳转后需要重新确认地址，以及运费在最后一步才出现。</p>
+  <h2>方案要点</h2>
+  <ul>
+    <li>地址默认使用上一次的收货信息，可就地修改。</li>
+    <li>运费随地址实时更新，总价始终可见。</li>
+    <li>支付方式记住上一次的选择。</li>
+  </ul>
+  <h2>里程碑</h2>
+  <p>10 月底完成设计评审，11 月中旬灰度 10% 流量，观察两周后全量。</p>
+</main>
+</body>
+</html>

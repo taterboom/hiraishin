@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hiraishin 宣传片</title>
+<style>
+  body { margin: 0; background: #0d110f; color: #e9ede8; font: 14px/1.5 system-ui, "Segoe UI", "Microsoft YaHei", sans-serif; }
+  main { max-width: 1120px; margin: 0 auto; padding: 24px 16px 40px; }
+  canvas { width: 100%; height: auto; display: block; border-radius: 10px; background: #000; }
+  .bar { display: flex; gap: 12px; align-items: center; margin-top: 12px; }
+  button { font: inherit; font-weight: 600; background: #1a201c; color: inherit; border: 1px solid #2a332e; border-radius: 8px; padding: 6px 14px; min-width: 72px; }
+  input[type=range] { flex: 1; accent-color: #e5bd7d; }
+  .t { font-variant-numeric: tabular-nums; color: #9aa49c; min-width: 140px; text-align: right; }
+  body.render main { padding: 0; max-width: none; } body.render .bar { display: none; } body.render canvas { width: 1920px; border-radius: 0; }
+</style>
+</head>
+<body>
+<main>
+  <canvas id="cv" width="1920" height="1080"></canvas>
+  <div class="bar"><button id="play" type="button">播放</button><input id="scrub" type="range" min="0" step="0.0333" value="0"><span class="t" id="t"></span></div>
+</main>
+<script src="motion-prompt-motion.js"></script>
+<script>
+// Store promo: #005 title → real wheel footage recorded by record.mjs → #020 zoom through to the end card.
+const W = 1920, H = 1080, M = window.MOTION;
+const CJK = M.CN;
+const B = { bg: '#151a17', ink: '#e9ede8', muted: '#9aa49c', amber: '#e5bd7d', sage: '#b9d0a8', panel: '#202622', panel2: '#2c3530', line: '#39433d' };
+const FOOT = '../../.artifacts/promo/footage/';
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+
+function txt(k, s, x, y, font, col, align = 'center') { k.font = font; k.fillStyle = col; k.textAlign = align; k.textBaseline = 'middle'; k.fillText(s, x, y); }
+function wheelGlyph(k, x, y, r, col, lw) {
+  k.save(); k.strokeStyle = col; k.lineWidth = lw; k.lineCap = 'round';
+  k.beginPath(); k.arc(x, y, r, 0, 7); k.stroke(); k.beginPath(); k.arc(x, y, r * 0.42, 0, 7); k.stroke();
+  k.beginPath(); for (let i = 0; i < 8; i++) { const a = (i + 0.5) * Math.PI / 4; k.moveTo(x + Math.cos(a) * r * 0.42, y + Math.sin(a) * r * 0.42); k.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); }
+  k.stroke(); k.restore();
+}
+
+// ---------------------------------------------------------------- footage
+let LOG, FRAMES = {};
+const IMG = new Map();
+function loadImage(file) {
+  if (!IMG.has(file)) IMG.set(file, new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = FOOT + file; }));
+  return IMG.get(file);
+}
+const lastAt = (list, t) => { let lo = 0, hi = list.length - 1, r = -1; while (lo <= hi) { const m = (lo + hi) >> 1; if (list[m].t <= t) { r = m; lo = m + 1; } else hi = m - 1; } return r; };
+const FOOT_IN = 2.2;                 // seconds of the recording skipped at the start
+let FOOT_LEN = 0;
+
+// Window layout: the page viewport scaled into a dark browser frame with its tab strip.
+let VS = 1;
+let VW, VH, WX, WY;
+const STRIP = 46, TOOL = 40;
+function layout() { VS = 1500 / LOG.view.w; VW = LOG.view.w * VS; VH = LOG.view.h * VS; WX = (W - VW) / 2; WY = 26; }
+
+function pointerAt(t) {
+  const p = LOG.pointer, i = lastAt(p, t);
+  if (i < 0) return p[0];
+  if (i === p.length - 1) return p[i];
+  const a = p[i], b = p[i + 1], f = Math.min(1, (t - a.t) / Math.max(1e-3, b.t - a.t));
+  return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
+}
+const altDown = t => { let d = false; for (const k of LOG.keys) { if (k.t > t) break; if ('down' in k) d = k.down; } return d; };
+
+function drawCursor(k, x, y, pressed) {
+  k.save(); k.translate(x, y); k.scale(1.25, 1.25);
+  k.beginPath(); k.moveTo(0, 0); k.lineTo(0, 17); k.lineTo(4.2, 13.2); k.lineTo(7.2, 19.6); k.lineTo(9.8, 18.4); k.lineTo(6.9, 12.2); k.lineTo(12.4, 12.2); k.closePath();
+  k.fillStyle = '#fff'; k.fill(); k.lineWidth = 1.3; k.strokeStyle = '#111'; k.stroke();
+  k.restore();
+}
+function drawStrip(k, tabs) {
+  k.fillStyle = '#1b201d'; k.beginPath(); k.roundRect(WX, WY, VW, STRIP + TOOL + VH, [14, 14, 6, 6]); k.fill();
+  [['#ff5f57', 0], ['#febc2e', 1], ['#28c840', 2]].forEach(([c, i]) => { k.fillStyle = c; k.beginPath(); k.arc(WX + 22 + i * 20, WY + STRIP / 2, 6, 0, 7); k.fill(); });
+  let x = WX + 92; const tw = 250;
+  for (const tab of tabs) {
+    if (tab.active) { k.fillStyle = B.panel2; k.beginPath(); k.roundRect(x, WY + 8, tw, STRIP - 8, [10, 10, 0, 0]); k.fill(); }
+    k.save(); k.beginPath(); k.rect(x + 12, WY + 8, tw - 24, STRIP - 8); k.clip();
+    txt(k, tab.title, x + 16, WY + 8 + (STRIP - 8) / 2, `${tab.active ? 600 : 400} 15px ${CJK}`, tab.active ? B.ink : B.muted, 'left');
+    k.restore();
+    x += tw + 4;
+  }
+  k.fillStyle = B.panel2; k.fillRect(WX, WY + STRIP, VW, TOOL);
+  k.fillStyle = '#1b201d'; k.beginPath(); k.roundRect(WX + 96, WY + STRIP + 7, VW - 192, TOOL - 14, 13); k.fill();
+  // The extension's toolbar button.
+  wheelGlyph(k, WX + VW - 34, WY + STRIP + TOOL / 2, 10, B.amber, 2.2);
+}
+function drawKeycap(k, down) {
+  const x = WX + 28, y = WY + STRIP + TOOL + VH - 84, w = 92, h = 58;
+  k.save(); k.globalAlpha = down ? 1 : 0.0;
+  k.fillStyle = 'rgba(0,0,0,.35)'; k.beginPath(); k.roundRect(x, y + 5, w, h, 12); k.fill();
+  k.fillStyle = B.amber; k.beginPath(); k.roundRect(x, y + (down ? 3 : 0), w, h, 12); k.fill();
+  txt(k, 'Alt', x + w / 2, y + h / 2 + (down ? 3 : 0), `800 24px ${M.DISP}`, B.bg);
+  k.restore();
+}
+async function drawFootage(k, u) {
+  const t = LOG.start + FOOT_IN + u;
+  k.fillStyle = B.bg; k.fillRect(0, 0, W, H);
+  const snap = LOG.tabs[Math.max(0, lastAt(LOG.tabs, t))];
+  drawStrip(k, snap.tabs);
+  const activeKey = (snap.tabs.find(x => x.active) || {}).key;
+  const list = FRAMES[activeKey] || [];
+  const fi = lastAt(list, t);
+  if (fi >= 0) k.drawImage(await loadImage(list[fi].file), WX, WY + STRIP + TOOL, VW, VH);
+  const p = pointerAt(t);
+  drawKeycap(k, altDown(t));
+  drawCursor(k, WX + p.x * VS, WY + STRIP + TOOL + p.y * VS);
+  const ci = lastAt(LOG.captions, t);
+  if (ci >= 0) txt(k, LOG.captions[ci].text, W / 2, 1018, `600 40px ${CJK}`, B.ink);
+}
+
+// ---------------------------------------------------------------- title and end
+function title(k, u) {
+  k.fillStyle = B.bg; k.fillRect(0, 0, W, H);
+  const s = 2.7, cw = M.CW * s, ch = M.CH * s;
+  k.save(); k.translate((W - cw) / 2, (H - ch) / 2); k.scale(s, s); M.maskReveal(k, M.CW, M.CH, u); k.restore();
+}
+let OF, ZSC;
+function setupEnd() {
+  const s = 'ONE FLICK', probe = M.chars(ctx, s, `800 100px ${M.DISP}`, 0);
+  const span = probe.at(-1).x + probe.at(-1).w / 2 - (probe[0].x - probe[0].w / 2);
+  const fs = Math.min(340, 100 * (W - 280) / span), font = `800 ${fs}px ${M.DISP}`, items = M.chars(ctx, s, font, 0);
+  const q = fs / 118, ty = H / 2 - 20, ringY = ty - 4 * q;
+  OF = { items, font, q, ty, ringY };
+  const sceneX = (k, w, h) => {
+    k.fillStyle = B.sage; k.fillRect(0, 0, w, h);
+    for (const o of items) {
+      if (o.ch === 'O') { k.strokeStyle = B.amber; k.lineWidth = 21 * q; k.beginPath(); k.arc(w / 2 + o.x, ringY, 35 * q, 0, 7); k.stroke(); }
+      else if (o.ch !== ' ') M.txt(k, o.ch, w / 2 + o.x, ty, font, B.bg, 'center', 'middle');
+    }
+  };
+  const sceneY = (k, w, h) => {
+    k.fillStyle = B.bg; k.fillRect(0, 0, w, h);
+    wheelGlyph(k, w / 2, 340, 124, B.amber, 18);
+    txt(k, '飛雷神 Hiraishin', w / 2, 590, `800 108px ${CJK}`, B.ink);
+    txt(k, '一 甩 即 达', w / 2, 718, `700 62px ${CJK}`, B.sage);
+    txt(k, 'Chrome 网上应用店 · 14 天免费试用', w / 2, 848, `500 38px ${CJK}`, B.muted);
+  };
+  ZSC = [{ bg: B.sage, hole: { x: W / 2 + items[0].x, y: ringY, r: 24.5 * q }, draw: sceneX }, { bg: B.bg, hole: { x: W / 2, y: H / 2, r: 40 }, draw: sceneY }];
+}
+
+// ---------------------------------------------------------------- timeline
+let SHOTS, TOTAL;
+function buildTimeline() {
+  SHOTS = [
+    [2.35, (k, u) => title(k, u)],                                    // #005, one pass including its exit
+    [FOOT_LEN, (k, u) => drawFootage(k, u)],                            // real footage
+    [4.2, (k, u) => M.zoomThrough(k, W, H, Math.min(u, 2.3), 0, 1, ZSC)], // #020, then the end card holds
+  ];
+  let acc = 0; for (const s of SHOTS) { s.unshift(acc); acc += s[1]; }
+  TOTAL = acc;
+}
+async function draw(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+  const s = SHOTS.find(([a, len]) => t < a + len) || SHOTS.at(-1);
+  ctx.save(); await s[2](ctx, Math.min(t - s[0], s[1] - 1e-6)); ctx.restore();
+}
+
+const ready = (async () => {
+  LOG = await (await fetch(FOOT + 'log.json')).json();
+  for (const f of LOG.frames) (FRAMES[f.tab] ||= []).push(f);
+  FOOT_LEN = LOG.end - LOG.start - FOOT_IN;
+  layout(); await document.fonts.ready; setupEnd(); buildTimeline();
+  window.TOTAL = TOTAL;
+})();
+window.renderFrame = async t => { await ready; await draw(t); return cv.toDataURL('image/jpeg', 0.95); };
+
+// Preview player
+const scrub = document.getElementById('scrub'), tEl = document.getElementById('t'), playBtn = document.getElementById('play');
+let t = 0, playing = false, last = 0, busy = false;
+if (new URLSearchParams(location.search).has('render')) document.body.classList.add('render');
+async function show() { if (busy) return; busy = true; await draw(t); busy = false; scrub.value = t; tEl.textContent = `${t.toFixed(2)} / ${TOTAL.toFixed(2)} s`; }
+playBtn.onclick = () => { playing = !playing; playBtn.textContent = playing ? '暂停' : '播放'; };
+scrub.oninput = () => { t = +scrub.value; playing = false; playBtn.textContent = '播放'; show(); };
+ready.then(() => { scrub.max = TOTAL.toFixed(2); show(); requestAnimationFrame(function loop(n) { if (playing) { t = (t + Math.min(0.1, (n - last) / 1000)) % TOTAL; show(); } last = n; requestAnimationFrame(loop); }); });
+</script>
+</body>
+</html>
