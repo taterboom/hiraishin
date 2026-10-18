@@ -64,6 +64,12 @@
     "switch-previous-tab": {
       "description": "__MSG_cmd_switch_previous_tab__"
     },
+    "activate-left-tab": {
+      "description": "__MSG_cmd_activate_left_tab__"
+    },
+    "activate-right-tab": {
+      "description": "__MSG_cmd_activate_right_tab__"
+    },
     "close-right": {
       "description": "__MSG_cmd_close_right__"
     },

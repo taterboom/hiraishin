@@ -24,6 +24,8 @@ test('sync publishes the page config and registers scripts only when permitted',
   assert.equal(wanted.overlay, false, 'default-on still requires website permission');
   assert.equal((await store.get()).overlay.enabled, true, 'permission state does not overwrite the preference');
   assert.equal(env.data.local[PAGE_CONFIG_KEY].overlay.enabled, false);
+  assert.equal(env.data.local[PAGE_CONFIG_KEY].overlay.extensionPages, true,
+    'our own settings page needs no website permission, so the wheel works there from the start');
   assert.equal(env.data.scripts.size, 0, 'legacy script removed and nothing registered without permission');
   assert.deepEqual(env.data.local[PAGE_CONFIG_KEY].keymap, {});
 
@@ -47,6 +49,8 @@ test('sync publishes the page config and registers scripts only when permitted',
   await store.update(settings => { settings.overlay.enabled = false; return settings; });
   wanted = await service.sync();
   assert.equal(wanted.overlay, false);
+  assert.equal(env.data.local[PAGE_CONFIG_KEY].overlay.extensionPages, false,
+    'switching the wheel off switches it off on our own pages too');
   assert.equal(env.data.scripts.has(OVERLAY_SCRIPT_ID), false, 'an explicit opt-out unregisters the wheel');
 });
 

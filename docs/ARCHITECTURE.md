@@ -51,7 +51,7 @@ flowchart LR
 ## 2. 目录
 
 ```text
-manifest.json              权限、20 个原生命令（与 actions.js 同源，check 脚本校验）
+manifest.json              权限、22 个原生命令（与 actions.js 同源，check 脚本校验）
 popup.html / options.html  仅挂载点，引用 ui/*.js 与 ui/*.css（构建产物）
 offscreen.html             剪贴板离屏文档
 src/                       service worker、领域模块、内容脚本（原样复制进 dist）
@@ -80,7 +80,7 @@ docs/                      产品方案、本文、商店文案
 | --- | --- |
 | 历史队列 | 所有历史变更经 `enqueue()` 串行执行；`onActivated` 用“预期激活标记”区分历史导航自身引起的激活（只移游标）与真实访问（追加）。标记 10 秒过期。 |
 | 动作分发 | `runAction(id, ctx)`：解析上下文 → 按 `action.kind` 调用领域模块 → 统一结果 `{ status, message, notify }` → 非面板来源且 `notify` 为真时发通知。 |
-| 消息边界 | `handleMessage(message, sender)`：`sender.url` 以 `chrome-extension://<id>/` 开头视为扩展页面（设置页运行在标签页里，不能用“有 tab”判断）；内容脚本只允许 `web-shortcut` 与 `overlay-state` / `overlay-action` / `overlay-confirm-action`；要求来源 Tab 处于激活状态，快捷键需匹配已保存绑定与有效 keymap，轮盘动作需属于当前分区配置。 |
+| 消息边界 | `handleMessage(message, sender)`：`sender.url` 以 `chrome-extension://<id>/` 开头视为扩展页面（设置页运行在标签页里，不能用“有 tab”判断）；扩展页面只有三条 `overlay-*` 消息走内容脚本那条路（设置页加载的是同一份轮盘），其余仍走受信面板协议；内容脚本只允许 `web-shortcut` 与 `overlay-state` / `overlay-action` / `overlay-confirm-action`；要求来源 Tab 处于激活状态，快捷键需匹配已保存绑定与有效 keymap，轮盘动作需属于当前分区配置。 |
 | 设置变更 | `afterSettingsChange()` 串行执行：同步网页配置与脚本注册 → 重建右键菜单 → 向新注册脚本的已开页面即时注入 → 返回设置视图。设置页与权限事件可能同时触发，串行化避免重复注册。 |
 | 剪贴板 | `copyText()` 经离屏文档执行 `execCommand('copy')`，需要 `clipboardWrite` 权限；调用互斥。 |
 | 授权检查 | 所有真正执行操作的路径在入口检查使用资格：`runAction`（快捷键、面板、网页快捷键、网页轮盘）、右键菜单、两种轮盘批量关闭的预览与确认、`navigate` / `jump` / `close-right` 消息、任务重试。预览也检查，避免确认后才被拒。被拒不计入使用统计；`runAction` 与右键菜单返回 `license-required` 并对非面板来源发通知，其余路径抛出同一条提示。成功结果（`ok`、`navigated`、`filled`、`sent`，或 `changed: true`）交给 `license.noteResult()` 用来开始试用。设置、统计、待处理选区的查看与清除、授权消息不受限。见 [LICENSE_INTEGRATION.md](LICENSE_INTEGRATION.md)。 |
@@ -118,9 +118,9 @@ docs/                      产品方案、本文、商店文案
 | `sync-page` | 设置页 | — | 权限变化后重新同步 |
 | `list-tasks` / `retry-task` / `remove-task` | 面板 | `taskId` | 待处理选区 |
 | `web-shortcut` | 内容脚本 | `actionId, combo` | 动作结果或 `{ status: 'ignored' }` |
-| `overlay-state` | 内容脚本 | — | `{ state }`：只含轮盘要画的东西（`slots`：每个分区一个动作或 null、可用性输入、平台），不含设置与标签标题 |
-| `overlay-action` | 内容脚本 | `id` | 普通动作返回执行结果；`close-right` 只返回 `{ status: 'confirmation-required', confirmation: { token, count } }`；不在 `overlay.slots` 里的动作、以及需要输入的动作被拒绝 |
-| `overlay-confirm-action` | 内容脚本 | `id: 'close-right'`, `token` | 消费一次性确认，再关闭预览中的标签；验证来源标签、frame、窗口、有效期和标签集合 |
+| `overlay-state` | 内容脚本 / 设置页 | — | `{ state }`：只含轮盘要画的东西（`slots`：每个分区一个动作或 null、可用性输入、平台），不含设置与标签标题 |
+| `overlay-action` | 内容脚本 / 设置页 | `id` | 普通动作返回执行结果；`close-right` 只返回 `{ status: 'confirmation-required', confirmation: { token, count } }`；不在 `overlay.slots` 里的动作、以及需要输入的动作被拒绝 |
+| `overlay-confirm-action` | 内容脚本 / 设置页 | `id: 'close-right'`, `token` | 消费一次性确认，再关闭预览中的标签；验证来源标签、frame、窗口、有效期和标签集合 |
 | `offscreen-copy` | worker → 离屏 | `text` | `{ ok }` |
 | `hiraishin-ping` | worker → 内容脚本 | — | `{ ready, active }`（仅顶层 frame 回应） |
 | `get-license` | 设置页 / 面板 | — | `{ license: LicenseView }`；`get-state` 也包含 `license` |
@@ -188,7 +188,7 @@ sequenceDiagram
 
 - **page-shortcuts.js**：读取 `pageConfig.keymap`，在 `keydown` 捕获阶段匹配组合键（只响应 `isTrusted` 事件），命中后 `preventDefault` 并发 `web-shortcut`。`repeat: 'allow'` 的动作允许长按重复。站点判定以顶层 frame 的域名为准。
 - **旧选区浮动按钮迁移**：不再打包或注册 `page-selection-button.js`，`shortcuts.sync()` 注销旧 `hiraishin-selection-button` 注册并发布 `floating: null`，通知尚存的旧监听器隐藏按钮；旧 `floatingButton` 偏好在规范化时丢弃，`floating-transfer` 消息不再可执行。选区发送统一使用轮盘、快捷键或右键菜单。
-- **ui/overlay.js**：网页动作轮盘，唯一带打包的内容脚本（React，约 228 KB）。长按修饰键（macOS Option、其他 Alt，`resolveHoldCode` 将 `auto` 解析为 `Alt`）弹出、甩方向选中、松开或左键执行、右键或 Esc 取消，全部在封闭 Shadow DOM 里完成。修饰键长按会连发 keydown，只有第一次计时；按下任何其他键说明用户在敲真正的组合键，立即解除武装并收起面板；松开时 `preventDefault`，否则 Windows / Linux 上单独松开 Alt 会唤出 Chrome 菜单。它只认 `isTrusted` 事件，输入框聚焦时仅允许修饰键触发，字母、数字触发键不武装，`chrome.runtime.id` 消失（扩展重载）后直接不响应。默认开启；只有已启用且获得网页权限时才注册。起甩点：页面只能从鼠标事件得知指针位置，刚打开的页面、切回的标签页或鼠标离开过页面时，位置未知或已过期；此时按下触发键只上膛不定起点，以随后第一个指针采样为圆心（优先 `pointerrawupdate`，其次 `pointermove` 的合并采样，最后 `mousemove`），这两个监听只在等待起点期间挂上。否则圆心会按 (0, 0) 摆放并被推到左上角，还会顺带选中右下方那一瓣。它只注入顶层框架（`allFrames: false`，仍在 `document_start` 注入），因为画在 iframe 里的轮盘会被裁在框架内，也不必把 React 包加载进每个广告和嵌入框架；网页快捷键脚本仍注入所有框架，以便在嵌入的编辑器里也能收到按键。旧版本留下的全框架注册会在下次同步时用 `updateContentScripts` 原地收窄，已打开的页面在刷新前保持原样。未授权时设置页展示授权提示，已保存的关闭设置会保留。
+- **ui/overlay.js**：网页动作轮盘，唯一带打包的内容脚本（React，约 228 KB）。长按修饰键（macOS Option、其他 Alt，`resolveHoldCode` 将 `auto` 解析为 `Alt`）弹出、甩方向选中、松开或左键执行、右键或 Esc 取消，全部在封闭 Shadow DOM 里完成。修饰键长按会连发 keydown，只有第一次计时；按下任何其他键说明用户在敲真正的组合键，立即解除武装并收起面板；松开时 `preventDefault`，否则 Windows / Linux 上单独松开 Alt 会唤出 Chrome 菜单。它只认 `isTrusted` 事件，输入框聚焦时仅允许修饰键触发，字母、数字触发键不武装，`chrome.runtime.id` 消失（扩展重载）后直接不响应。默认开启；只有已启用且获得网页权限时才注册。起甩点：页面只能从鼠标事件得知指针位置，刚打开的页面、切回的标签页或鼠标离开过页面时，位置未知或已过期；此时按下触发键只上膛不定起点，以随后第一个指针采样为圆心（优先 `pointerrawupdate`，其次 `pointermove` 的合并采样，最后 `mousemove`），这两个监听只在等待起点期间挂上。否则圆心会按 (0, 0) 摆放并被推到左上角，还会顺带选中右下方那一瓣。它只注入顶层框架（`allFrames: false`，仍在 `document_start` 注入），因为画在 iframe 里的轮盘会被裁在框架内，也不必把 React 包加载进每个广告和嵌入框架；网页快捷键脚本仍注入所有框架，以便在嵌入的编辑器里也能收到按键。旧版本留下的全框架注册会在下次同步时用 `updateContentScripts` 原地收窄，已打开的页面在刷新前保持原样。未授权时设置页展示授权提示，已保存的关闭设置会保留。设置页自己用一个 `<script defer>` 加载同一份 bundle：那里没有内容脚本，也不需要网站权限，因此 `pageConfig.overlay` 另带一个 `extensionPages` 开关（只跟随偏好，不看权限），脚本按 `location.protocol === 'chrome-extension:'` 选用哪一个。`chrome://` 等浏览器保留页面不在此列——Chrome 不允许扩展在那里运行任何代码。
 - **轮盘中心提示**：快速甩动时不显示文字；在同一非空分区停留 2 秒后显示动作名称与操作提示；在圆心停留 2 秒后显示「松开取消 / 甩向某一瓣选择」。切换分区或回到圆心会隐藏提示并重新计时，关闭轮盘会清除计时，危险动作确认不受提示延迟影响。设置页预览仍直接显示所选动作。
 - **轮盘动作配置**：设置页的 `WheelActionPicker` 使用共享动作图标，按分类展示并支持名称、目标缩写与关键词搜索；可用方向键选择、Esc 取消，支持留空。`WheelPositions` 从已保存的 `overlay.slots` 派生所有位置，在动作选择列表及动作表的独立位置列中显示方向箭头和位置，不添加“轮盘”前缀；重复配置显示多个位置，分区数量改变时同步更新。分区数用右栏顶部的分段按钮切换（原生单选框，方向键可切换）；减少分区时被截掉的动作在本次页面会话内记住，改回更多分区时恢复，避免一次误点丢掉配置。
 - **轮盘批量关闭确认**：`Confirmation.tsx` 替换轮盘显示确认卡片，默认聚焦取消，Tab 焦点只在按钮间循环；卡片与原轮盘共用中心，空间不足时限制在视口内，尺寸和视口变化时重新定位。唤出卡片的点击被消费，避免点击穿透。Esc、点击外部、窗口失焦或标签隐藏会取消；异步状态请求返回时会检查手势版本 / 确认对象，防止取消后重新显示。后台 `overlay-action` 对 `close-right` 只生成预览，保存来源标签与 frame、窗口、候选标签 ID 和 2 分钟有效期；`overlay-confirm-action` 在队列内消费 token，候选集合变化即拒绝，执行中仍逐个复查锚点、固定状态及位置。后台重启后 token 失效，需重新确认。网页轮盘使用此流程；工具栏轮盘使用下面的 popup 确认协议。

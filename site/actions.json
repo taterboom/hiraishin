@@ -58,6 +58,43 @@
       "defaultShortcut": null
     },
     {
+      "id": "activate-left-tab",
+      "name": "Tab to the left",
+      "category": "Navigate",
+      "keywords": [
+        "left",
+        "previous",
+        "prev",
+        "左",
+        "上一个",
+        "切换",
+        "左側",
+        "前のタブ"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
+      "id": "activate-right-tab",
+      "name": "Tab to the right",
+      "category": "Navigate",
+      "keywords": [
+        "right",
+        "next",
+        "右",
+        "下一个",
+        "切换",
+        "右側",
+        "次のタブ"
+      ],
+      "nativeCommand": true,
+      "webShortcut": true,
+      "requiresSelection": false,
+      "defaultShortcut": null
+    },
+    {
       "id": "close-right",
       "name": "Close tabs to the right",
       "category": "Arrange",

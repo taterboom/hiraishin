@@ -2,7 +2,7 @@ import { normalizeCombo } from './keys.js';
 import { BUILTIN_TARGETS } from './targets.js';
 import { LOCALE_PREFERENCES } from './i18n.js';
 
-export const SETTINGS_VERSION = 4;
+export const SETTINGS_VERSION = 5;
 export const SETTINGS_KEY = 'settings';
 export const PAGE_ORIGINS = ['http://*/*', 'https://*/*'];
 export const TARGET_CAPABILITIES = ['navigate', 'fill', 'send'];
@@ -19,6 +19,22 @@ export const DEFAULT_PINNED = [
   'history-back', 'history-forward', 'switch-previous-tab', 'close-right',
   'duplicate-tab', 'send-default-target',
 ];
+/** The wheel out of the box: eight sectors clockwise from twelve o'clock, laid out so the
+ *  directions mean something. Up and down are the visit history, left and right walk the tab
+ *  strip the same way, and the four corners hold the rest. */
+export const DEFAULT_SLOTS = [
+  'history-back',         // up
+  'duplicate-tab',        // up-right
+  'activate-right-tab',   // right
+  'switch-previous-tab',  // down-right
+  'history-forward',      // down
+  'close-right',          // down-left
+  'activate-left-tab',    // left
+  'send-default-target',  // up-left
+];
+/** What v4 shipped as the default wheel. An installation still carrying exactly this list never
+ *  configured its own, so it takes the v5 layout; anything else is the user's own arrangement. */
+const V4_DEFAULT_SLOTS = [...DEFAULT_PINNED];
 const MINUS_BINDINGS = { 'history-back': 'Ctrl+Minus', 'history-forward': 'Ctrl+Shift+Minus' };
 
 /**
@@ -45,7 +61,7 @@ export function defaultSettings() {
     // optional delay before arming; the default is immediate, with movement revealing the wheel.
     // Slots are the sectors clockwise from twelve o'clock; an empty one draws a blank sector.
     // In editable elements, only modifier triggers may arm; character triggers stay disabled.
-    overlay: { enabled: true, holdCode: 'auto', holdMs: 0, slots: [...DEFAULT_PINNED] },
+    overlay: { enabled: true, holdCode: 'auto', holdMs: 0, slots: [...DEFAULT_SLOTS] },
     targets: { enabled: /** @type {Record<string, 'navigate' | 'fill' | 'send'>} */ (
       Object.fromEntries(BUILTIN_TARGETS.map(target => [target.id, target.capability]))), custom: [] },
   };
@@ -113,6 +129,11 @@ export function normalizeSettings(raw) {
     const pinned = stringList(raw.pinnedActions).slice(0, 8);
     const size = OVERLAY_SECTORS.find(n => n >= pinned.length) ?? 12;
     settings.overlay.slots = Array.from({ length: size }, (_, index) => pinned[index] ?? null);
+  }
+  // An untouched v4 wheel moves to the v5 compass; a configured one is left exactly as saved.
+  if (Number(raw.version) < 5 && settings.overlay.slots.length === V4_DEFAULT_SLOTS.length
+    && settings.overlay.slots.every((id, index) => id === V4_DEFAULT_SLOTS[index])) {
+    settings.overlay.slots = [...DEFAULT_SLOTS];
   }
   const enabled = raw.targets?.enabled;
   if (enabled && typeof enabled === 'object') {

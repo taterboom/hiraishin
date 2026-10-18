@@ -41,6 +41,8 @@ function pathsFor(action: ActionInfo): string[] {
       ? ['M14 6l-6 6 6 6', 'M8 12h11']
       : ['M10 6l6 6-6 6', 'M5 12h11'];
     case 'previous-tab': return ['M4 8h12l-3-3', 'M20 16H8l3 3'];
+    // Lucide's chevron-left / chevron-right: the direction alone, with nothing else to read.
+    case 'activate-relative': return action.id.includes('left') ? ['m15 18-6-6 6-6'] : ['m9 18 6-6-6-6'];
     case 'close-right': return ['M4 6h8v12H4z', 'M15 9l5 5', 'M20 9l-5 5'];
     case 'move': {
       const move = (action as ActionInfo & { move?: string }).move ?? action.id.replace('move-tab-', '');

@@ -204,6 +204,25 @@ test('close-right rechecks candidates and stops if its anchor moves to another w
   assert.deepEqual(env.data.removed, []);
 });
 
+test('the settings page drives the same wheel, and its other messages stay on the panel path', async () => {
+  const env = browser({ settings: { overlay: { enabled: true, slots: ['activate-right-tab', 'duplicate-tab', null, null] } },
+    tabs: [tab(1, 1, 0), tab(77, 1, 1, true), tab(3, 1, 2)] });
+  await env.ready();
+  const { state } = await env.message('overlay-state', {}, optionsSender);
+  assert.deepEqual(state.slots.map(slot => slot?.id ?? null), ['activate-right-tab', 'duplicate-tab', null, null]);
+  assert.equal((await env.message('overlay-action', { id: 'activate-right-tab' }, optionsSender)).status, 'ok');
+  assert.equal(env.active(1), 3, 'the wheel acted on the window the settings page sits in');
+  assert.equal((await env.message('get-settings', {}, optionsSender)).settings.overlay.enabled, true,
+    'the trusted panel protocol is unaffected');
+  await assert.rejects(env.message('web-shortcut', { actionId: 'duplicate-tab', combo: 'Ctrl+D' }, optionsSender), /未知操作/,
+    'an extension page is never treated as a web page for anything else');
+  const off = browser({ settings: { overlay: { enabled: false, slots: ['duplicate-tab', null, null, null] } },
+    tabs: [tab(77, 1, 0, true), tab(3, 1, 1)] });
+  await off.ready();
+  assert.deepEqual(await off.message('overlay-state', {}, optionsSender), { status: 'ignored', message: '' },
+    'turning the wheel off turns it off here too');
+});
+
 test('wheel close only prepares a count; explicit confirmation closes the approved tabs once', async () => {
   const env = browser({ settings: { overlay: { enabled: true } },
     tabs: [tab(1, 1, 0, true), tab(2, 1, 1, false, { pinned: true }), tab(3, 1, 2), tab(4, 1, 3), tab(10, 2, 0, true)] });
@@ -404,7 +423,7 @@ test('content scripts may only trigger the web shortcut they are bound to, from 
   for (const type of ['get-state', 'close-right', 'save-settings', 'jump', 'run-action']) {
     await assert.rejects(env.message(type, { id: 'close-right', windowId: 1 }, pageSender(1)), /扩展面板/);
   }
-  assert.equal((await env.message('get-settings', {}, optionsSender)).settings.version, 4, 'the options page lives in a tab but is trusted');
+  assert.equal((await env.message('get-settings', {}, optionsSender)).settings.version, 5, 'the options page lives in a tab but is trusted');
   assert.deepEqual(await env.message('web-shortcut', { actionId: 'close-right', combo: 'Ctrl+W' }, pageSender(1)), { status: 'ignored', message: '' }, 'combo must match the saved binding');
   assert.deepEqual(await env.message('web-shortcut', { actionId: 'close-right', combo: 'Ctrl+Shift+W' }, pageSender(2)), { status: 'ignored', message: '' }, 'inactive sender tab');
   const result = await env.message('web-shortcut', { actionId: 'close-right', combo: 'Ctrl+Shift+W' }, pageSender(1));

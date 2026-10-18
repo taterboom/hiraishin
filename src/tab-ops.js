@@ -46,6 +46,16 @@ export function createTabOps(api) {
       return { status: 'ok', tabId: target.id };
     },
 
+    /** The neighbour in the tab strip, wrapping at either end so the gesture always does something. */
+    async activateRelative(windowId, offset) {
+      const { tabs, active } = await context(windowId);
+      if (tabs.length <= 1) return { status: 'noop', message: t('bg.tabs.noOther') };
+      const position = tabs.findIndex(tab => tab.id === active.id);
+      const target = tabs[(position + offset + tabs.length) % tabs.length];
+      await api.tabs.update(target.id, { active: true });
+      return { status: 'ok', tabId: target.id };
+    },
+
     async move(windowId, direction) {
       const { tabs, active } = await context(windowId);
       const range = movementRange(tabs, active);

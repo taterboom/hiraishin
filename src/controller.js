@@ -257,6 +257,7 @@ export function createController(api, { license: licenseOptions } = {}) {
           break;
         }
         case 'previous-tab': result = await enqueue(() => tabOps.previousTab(ctx.windowId)); break;
+        case 'activate-relative': result = await enqueue(() => tabOps.activateRelative(ctx.windowId, action.offset)); break;
         case 'close-right': {
           const { closedCount } = await enqueue(() => closeRight(ctx.windowId));
           result = closedCount ? ok(t('bg.tabs.closed', { count: closedCount })) : { status: 'noop', message: t('bg.tabs.nothingRight'), notify: true };
@@ -427,6 +428,10 @@ export function createController(api, { license: licenseOptions } = {}) {
     return Boolean(sender.id) && typeof sender.url === 'string' && sender.url.startsWith(`chrome-extension://${sender.id}/`);
   }
 
+  /** The wheel's messages. Our own pages in a tab send them too, because the settings page loads
+   *  the same bundle; everything else an extension page sends stays on the trusted panel path. */
+  const OVERLAY_MESSAGES = new Set(['overlay-state', 'overlay-action', 'overlay-confirm-action']);
+
   async function handleContentMessage(message, sender) {
     const settings = await settingsStore.get();
     const tab = await api.tabs.get(sender.tab.id);
@@ -485,7 +490,7 @@ export function createController(api, { license: licenseOptions } = {}) {
   async function handleMessage(message, sender = {}) {
     await localeLoaded;
     if (!message || typeof message !== 'object') throw new Error(t('bg.error.invalidRequest'));
-    if (sender.tab && !isExtensionPage(sender)) return handleContentMessage(message, sender);
+    if (sender.tab && (!isExtensionPage(sender) || OVERLAY_MESSAGES.has(message.type))) return handleContentMessage(message, sender);
     const popupCtx = extra => ({ origin: 'popup', windowId: message.windowId, ...extra });
     switch (message.type) {
       case 'get-state': return enqueue(() => getState(message.windowId));

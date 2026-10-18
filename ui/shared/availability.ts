@@ -13,6 +13,7 @@ export function unavailableReason(action: ActionInfo, state: AvailabilityState):
   if (action.kind === 'close-right' && state.rightCount === 0) return t('shared.unavailable.noRight');
   if (action.kind === 'history' && !(action.id === 'history-back' ? state.canBack : state.canForward)) return t('shared.unavailable.edge');
   if (action.kind === 'previous-tab' && state.tabCount <= 1) return t('shared.unavailable.noOther');
+  if (action.kind === 'activate-relative' && state.tabCount <= 1) return t('shared.unavailable.noOther');
   if (action.kind === 'new-window' && state.tabCount <= 1) return t('shared.unavailable.singleTab');
   if (action.kind === 'transfer') {
     const wanted = action.targetId === 'default' ? state.defaultTargetId : action.targetId;

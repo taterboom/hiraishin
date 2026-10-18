@@ -97,7 +97,10 @@ export function createShortcutService(api, { settingsStore, listActionsFor }) {
       disabledSites: settings.webShortcuts.disabledSites,
       // Previously injected selection-button scripts hide themselves on this config change.
       floating: null,
-      overlay: { ...settings.overlay, enabled: wantOverlay },
+      // `enabled` is what a web page is allowed to do, so it waits on the host permission. The
+      // extension's own pages load the same bundle from a <script> tag and need no permission
+      // there, so they follow the preference alone.
+      overlay: { ...settings.overlay, enabled: wantOverlay, extensionPages: settings.overlay.enabled },
       // Content scripts cannot read the preference's resolution themselves: `auto` means the browser
       // language the extension sees, which is what the rest of the UI uses too.
       locale: resolveLocale(settings.locale, browserLanguage(api)),

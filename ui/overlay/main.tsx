@@ -53,7 +53,12 @@ if (!guard.__hiraishinOverlay) {
   let pointerKnown = false;
   /** Armed while the position was unknown: the origin is the first sample of the movement. */
   let originPending = false;
-  let config = { enabled: false, holdCode: 'auto', holdMs: 0 };
+  let config = { enabled: false, extensionPages: false, holdCode: 'auto', holdMs: 0 };
+  /** Extension pages (the settings page) load this same bundle from a <script> tag: no content
+   *  script, no host permission, and a separate flag in the published config. Browser pages such
+   *  as `chrome://extensions` stay out of reach — nothing may run there at all. */
+  const ownPage = location.protocol === 'chrome-extension:';
+  const armable = () => (ownPage ? config.extensionPages : config.enabled);
   /** The hold key resolved for this platform: `auto` cannot be compared against an event. */
   const holdKey = () => resolveHoldCode(config.holdCode, navigator.platform.startsWith('Mac') ? 'mac' : 'other');
 
@@ -266,7 +271,7 @@ if (!guard.__hiraishinOverlay) {
       if (!['Tab', 'Enter', ' '].includes(event.key)) event.stopPropagation();
       return;
     }
-    if (!config.enabled || !chrome.runtime?.id) return;
+    if (!armable() || !chrome.runtime?.id) return;
     const hold = holdKey();
     if (!isHoldKey(event, hold)) {
       // Any other key means a real shortcut is being typed, not the gesture: disarm, and close an
@@ -362,7 +367,8 @@ if (!guard.__hiraishinOverlay) {
 
   const apply = (value: { overlay?: typeof config; locale?: string } | undefined) => {
     const next = { ...config, ...(value?.overlay ?? {}) };
-    if (!next.enabled || next.holdCode !== config.holdCode || next.holdMs !== config.holdMs) hide();
+    const enabledHere = ownPage ? next.extensionPages : next.enabled;
+    if (!enabledHere || next.holdCode !== config.holdCode || next.holdMs !== config.holdMs) hide();
     config = next;
     applyLocale(value?.locale);
   };

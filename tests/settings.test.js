@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeSettings, defaultSettings, DEFAULT_PINNED, createSettingsStore, SETTINGS_KEY } from '../src/settings.js';
+import { normalizeSettings, defaultSettings, DEFAULT_PINNED, DEFAULT_SLOTS, createSettingsStore, SETTINGS_KEY } from '../src/settings.js';
 import { createFakeChrome } from './fake-chrome.js';
 import { holdKeyLabel, isHoldKey, otherModifierDown, resolveHoldCode } from '../src/keys.js';
 
@@ -46,7 +46,7 @@ test('the store migrates v1 minus bindings to the physical Control key on macOS 
   const mac = createFakeChrome({ platform: 'mac', local: { [SETTINGS_KEY]: { minusShortcuts: true } } });
   const settings = await createSettingsStore(mac.api).get();
   assert.deepEqual(settings.webShortcuts.bindings, { 'history-back': 'MacCtrl+Minus', 'history-forward': 'MacCtrl+Shift+Minus' });
-  assert.equal(mac.data.local[SETTINGS_KEY].version, 4, 'written back so migration runs once');
+  assert.equal(mac.data.local[SETTINGS_KEY].version, 5, 'written back so migration runs once');
   const win = createFakeChrome({ platform: 'win', local: { [SETTINGS_KEY]: { minusShortcuts: true } } });
   assert.deepEqual((await createSettingsStore(win.api).get()).webShortcuts.bindings, { 'history-back': 'Ctrl+Minus', 'history-forward': 'Ctrl+Shift+Minus' });
 });
@@ -89,7 +89,10 @@ test('the hold key reads as its key cap and matches either side of a modifier', 
 });
 
 test('the wheel slots decide the sector count and carry over from the pinned actions', () => {
-  assert.deepEqual(defaultSettings().overlay.slots, DEFAULT_PINNED, 'the wheel starts from the pinned six');
+  assert.deepEqual(defaultSettings().overlay.slots, DEFAULT_SLOTS, 'the wheel ships as the eight-way compass');
+  assert.equal(DEFAULT_SLOTS.length, 8);
+  assert.deepEqual([DEFAULT_SLOTS[0], DEFAULT_SLOTS[4]], ['history-back', 'history-forward'], 'up and down are the visit history');
+  assert.deepEqual([DEFAULT_SLOTS[6], DEFAULT_SLOTS[2]], ['activate-left-tab', 'activate-right-tab'], 'left and right walk the tab strip');
   const eight = normalizeSettings({ version: 4, overlay: { slots: ['history-back', null, null, null, 'duplicate-tab', null, null, null] } });
   assert.equal(eight.overlay.slots.length, 8, 'the array length is the sector count');
   assert.equal(eight.overlay.slots[4], 'duplicate-tab');
@@ -102,4 +105,16 @@ test('the wheel slots decide the sector count and carry over from the pinned act
   // v3 drew the pinned actions as a grid, so the wheel inherits that list on upgrade.
   const upgraded = normalizeSettings({ version: 3, pinnedActions: ['history-back', 'duplicate-tab', 'close-right'] });
   assert.deepEqual(upgraded.overlay.slots, ['history-back', 'duplicate-tab', 'close-right', null]);
+});
+
+test('an untouched v4 wheel takes the new layout; a configured one is left alone', () => {
+  const untouched = normalizeSettings({ version: 4, overlay: { slots: [...DEFAULT_PINNED] } });
+  assert.deepEqual(untouched.overlay.slots, DEFAULT_SLOTS, 'nobody chose those six, they were the v4 default');
+  const moved = [...DEFAULT_PINNED].reverse();
+  assert.deepEqual(normalizeSettings({ version: 4, overlay: { slots: moved } }).overlay.slots, moved,
+    'the same six in another order is somebody\'s arrangement');
+  const custom = ['copy-links', null, null, null];
+  assert.deepEqual(normalizeSettings({ version: 4, overlay: { slots: custom } }).overlay.slots, custom);
+  assert.deepEqual(normalizeSettings({ version: 5, overlay: { slots: [...DEFAULT_PINNED] } }).overlay.slots, DEFAULT_PINNED,
+    'a v5 install that chose those six keeps them');
 });

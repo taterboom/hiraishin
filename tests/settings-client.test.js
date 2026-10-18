@@ -32,7 +32,7 @@ test('rapid edits, shortcut changes and refreshes preserve each other', async ()
   ]);
   const final = views.at(-1).settings;
   assert.equal(final.overlay.holdCode, 'Control');
-  assert.deepEqual(final.overlay.slots, ['copy-links', 'duplicate-tab', 'switch-previous-tab', 'close-right']);
+  assert.deepEqual(final.overlay.slots, ['copy-links', 'duplicate-tab', 'activate-right-tab', 'switch-previous-tab']);
   assert.equal(final.webShortcuts.bindings['copy-links'], 'Ctrl+Shift+C');
 });
 

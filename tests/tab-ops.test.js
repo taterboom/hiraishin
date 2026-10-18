@@ -88,3 +88,17 @@ test('previous tab comes from lastAccessed, excluding the active tab and other w
   const lonely = createTabOps(createFakeChrome({ tabs: [tab(1, 1, 0, true)] }).api);
   assert.equal((await lonely.previousTab(1)).status, 'noop');
 });
+
+test('the neighbouring tab is the one beside it in the strip, wrapping at both ends', async () => {
+  const env = createFakeChrome({ tabs: [
+    tab(1, 1, 0, false, { pinned: true }), tab(2, 1, 1, true), tab(3, 1, 2), tab(9, 2, 0, true),
+  ] });
+  const ops = createTabOps(env.api);
+  assert.equal((await ops.activateRelative(1, 1)).tabId, 3);
+  assert.equal(env.active(1), 3);
+  assert.equal((await ops.activateRelative(1, 1)).tabId, 1, 'past the last tab comes the first, pinned included');
+  assert.equal((await ops.activateRelative(1, -1)).tabId, 3, 'and back the other way');
+  assert.equal(env.active(2), 9, 'other windows are untouched');
+  const lonely = createTabOps(createFakeChrome({ tabs: [tab(1, 1, 0, true)] }).api);
+  assert.equal((await lonely.activateRelative(1, 1)).status, 'noop', 'nowhere to go in a one-tab window');
+});

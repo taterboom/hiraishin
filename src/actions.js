@@ -17,6 +17,12 @@ const STATIC_ACTIONS = [
     keywords: ['forward', '前进', '历史', '進む', '履歴'], command: true, repeat: 'allow' }),
   define({ id: 'switch-previous-tab', category: 'travel', kind: 'previous-tab',
     keywords: ['previous', 'last', 'toggle', '上一个', '切换', 'mru', '直前', '切り替え'], command: true, repeat: 'allow' }),
+  // Neighbours in the tab strip, not in the visit history: these walk the bar itself and wrap
+  // around at either end, so holding the key cycles the window.
+  define({ id: 'activate-left-tab', category: 'travel', kind: 'activate-relative', offset: -1,
+    keywords: ['left', 'previous', 'prev', '左', '上一个', '切换', '左側', '前のタブ'], command: true, repeat: 'allow' }),
+  define({ id: 'activate-right-tab', category: 'travel', kind: 'activate-relative', offset: 1,
+    keywords: ['right', 'next', '右', '下一个', '切换', '右側', '次のタブ'], command: true, repeat: 'allow' }),
   define({ id: 'close-right', category: 'arrange', kind: 'close-right',
     keywords: ['close', 'right', '关闭', '右边', '收起', '閉じる', '右'], command: true }),
   define({ id: 'move-tab-left', category: 'arrange', kind: 'move', move: 'left',
