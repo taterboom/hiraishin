@@ -3,8 +3,8 @@
 // Keep browser-only integration and safety checks here; pure logic belongs in tests/.
 // Colours, pixel sizes, icon alignment and hint timing are reviewed visually.
 //
-//   npm run smoke                          # auto-detects a Chrome for Testing / Chromium build
-//   HEADLESS=1 npm run smoke               # no window; the in-page panel section cannot run there
+//   npm run smoke                          # headless: no window, never takes the desktop's focus
+//   HEADFUL=1 npm run smoke                # a visible window, to watch or debug the run
 //   CHROME=/path/to/Chromium npm run smoke
 //
 // Branded Google Chrome ignores --load-extension since v137, so a Chrome for Testing or
@@ -96,9 +96,10 @@ if (await fetch(`${CDP}/json/version`).then(() => true, () => false)) {
 const chromeBinary = await findChrome();
 console.log('chrome:', chromeBinary);
 const chrome = spawn(chromeBinary, [
-  // Headful by default: dispatching input into a page wedges the headless renderer, which stops
-  // answering the protocol entirely. HEADLESS=1 still forces it for anything that has no display.
-  ...(process.env.HEADLESS ? ['--headless=new'] : []), '--disable-gpu', `--remote-debugging-port=${PORT}`, '--remote-allow-origins=*',
+  // Headless by default, so a run never pulls focus away from whoever is working on the machine.
+  // (Older builds wedged the headless renderer once input was dispatched; chromium-1228 does not.)
+  // The window is sized like a laptop's so the wheel is never squeezed against the edges.
+  ...(process.env.HEADFUL ? [] : ['--headless=new', '--window-size=1200,900']), '--disable-gpu', `--remote-debugging-port=${PORT}`, '--remote-allow-origins=*',
   `--user-data-dir=${PROFILE}`, `--load-extension=${EXT_DIR}`, `--disable-extensions-except=${EXT_DIR}`,
   '--no-first-run', '--no-default-browser-check', 'about:blank',
 ], { stdio: 'ignore' });
