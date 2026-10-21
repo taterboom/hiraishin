@@ -22,6 +22,7 @@ chrome.notifications?.onClicked.addListener(id => {
   chrome.notifications.clear(id);
   report(chrome.runtime.openOptionsPage());
 });
+chrome.runtime.onConnect.addListener(port => controller.onRelayConnect(port));
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return false;
   if (message?.type === 'offscreen-copy' || message?.type === 'hiraishin-ping') return false; // Handled by other pages.

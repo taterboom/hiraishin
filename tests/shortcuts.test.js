@@ -44,7 +44,8 @@ test('sync publishes the page config and registers scripts only when permitted',
   await store.update(settings => { settings.webShortcuts.bindings = {}; return settings; });
   wanted = await service.sync();
   assert.equal(wanted.shortcuts, false);
-  assert.equal(env.data.scripts.has(SHORTCUT_SCRIPT_ID), false);
+  assert.equal(env.data.scripts.has(SHORTCUT_SCRIPT_ID), true,
+    'without bindings the script stays for the wheel: it relays gestures that start inside embedded frames');
   assert.equal(env.data.local[PAGE_CONFIG_KEY].floating, null);
   await store.update(settings => { settings.overlay.enabled = false; return settings; });
   wanted = await service.sync();
@@ -52,6 +53,7 @@ test('sync publishes the page config and registers scripts only when permitted',
   assert.equal(env.data.local[PAGE_CONFIG_KEY].overlay.extensionPages, false,
     'switching the wheel off switches it off on our own pages too');
   assert.equal(env.data.scripts.has(OVERLAY_SCRIPT_ID), false, 'an explicit opt-out unregisters the wheel');
+  assert.equal(env.data.scripts.has(SHORTCUT_SCRIPT_ID), false, 'and its relay, with no shortcuts left either');
 });
 
 test('existing http pages get the wanted scripts injected immediately', async () => {
@@ -81,7 +83,8 @@ test('upgrading disables and unregisters an enabled legacy selection button with
   assert.equal(env.data.scripts.has(OVERLAY_SCRIPT_ID), true);
   assert.equal('floatingButton' in await store.get(), false);
   await service.injectExisting(wanted.inject);
-  assert.deepEqual(env.data.executed.map(item => item.files), [['ui/overlay.js']]);
+  assert.deepEqual(env.data.executed.map(item => item.files), [['src/page-shortcuts.js'], ['ui/overlay.js']],
+    'the wheel and its relay for embedded frames');
   await service.sync();
   assert.equal(env.data.scripts.has('hiraishin-selection-button'), false, 'later syncs must not re-register the retired script');
 });

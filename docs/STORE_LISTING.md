@@ -57,7 +57,7 @@
 • 可选发送后回到来源页面；支持自定义目标，自定义网站需要兼容的页面结构和正确的配置。
 
 权限与边界
-• 网页轮盘和网页快捷键需要你主动允许网页访问；Chrome 内部页面等受限页面不适用。
+• 网页轮盘和网页快捷键需要你主动允许网页访问；Chrome 内部页面等受限页面不适用。大部分是嵌入框架的页面（如 artifact）也能召出轮盘。
 • AI 填入与发送需要目标网站权限和已登录账号，页面结构变化可能影响适配。
 • 22 个浏览器命令可在 Chrome 快捷键管理中绑定；网页快捷键可使用 Ctrl+- 等组合。原生快捷键触发的关闭操作立即执行，轮盘入口会再次确认。
 • 界面支持简体中文、日语和英语。
@@ -109,7 +109,7 @@ Option（Windows / Linux では Alt）を押しながらマウスを振ってア
 • 送信後に元のページへ戻ることもできます。カスタム送信先にも対応していますが、カスタムサイトには互換性のあるページ構造と正しい設定が必要です。
 
 権限と制限
-• ページ内ホイールとページ内ショートカットを使うには、サイトへのアクセスを許可する必要があります。Chrome の内部ページなど、制限されたページでは使えません。
+• ページ内ホイールとページ内ショートカットを使うには、サイトへのアクセスを許可する必要があります。Chrome の内部ページなど、制限されたページでは使えません。artifact のように大半が埋め込みフレームのページでもホイールを呼び出せます。
 • AI への入力と送信には、送信先サイトへのアクセス許可とログイン済みのアカウントが必要です。サイトのページ構造が変わると、うまく動かなくなることがあります。
 • 20 個のブラウザコマンドは Chrome のショートカット設定で割り当てられます。ページ内ショートカットでは Ctrl+- などの組み合わせも使えます。ネイティブショートカットで実行したタブを閉じる操作はすぐに実行され、ホイールからの場合は確認があります。
 • 画面は日本語・英語・簡体字中国語に対応しています。
@@ -161,7 +161,7 @@ Send selections to AI
 • Optionally return to the source page after sending. Custom targets are supported; custom websites need a compatible page structure and correct configuration.
 
 Permissions and limits
-• The in-page wheel and in-page shortcuts require you to allow site access; they don't work on restricted pages such as Chrome's internal pages.
+• The in-page wheel and in-page shortcuts require you to allow site access; they don't work on restricted pages such as Chrome's internal pages. The wheel also opens on pages that are mostly an embedded frame, such as artifacts.
 • Filling and sending to AI require access to the target website and a signed-in account; changes to the website's page structure may affect compatibility.
 • 20 browser commands can be bound in Chrome's keyboard shortcut settings; in-page shortcuts can use combinations such as Ctrl+-. Close actions triggered by native shortcuts run immediately, while the wheel asks you to confirm.
 • Interface in English, Simplified Chinese and Japanese.

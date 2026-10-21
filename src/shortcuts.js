@@ -14,9 +14,9 @@ const SCRIPTS = {
   [OVERLAY_SCRIPT_ID]: 'ui/overlay.js',
 };
 // Web shortcuts must hear keys typed inside embedded frames (editors, players), so they run in
-// every frame. The wheel only runs in the top frame: a wheel drawn inside an ad or embed would be
-// clipped to that frame, and loading the React bundle into every iframe of every page is weight
-// for nothing.
+// every frame; the same small script relays wheel gestures that start inside one. The wheel itself
+// only runs in the top frame: a wheel drawn inside an ad or embed would be clipped to that frame,
+// and loading the React bundle into every iframe of every page is weight for nothing.
 const ALL_FRAMES = {
   [SHORTCUT_SCRIPT_ID]: true,
   [OVERLAY_SCRIPT_ID]: false,
@@ -108,7 +108,8 @@ export function createShortcutService(api, { settingsStore, listActionsFor }) {
     const current = await registered();
     const legacy = LEGACY_SCRIPT_IDS.filter(id => current.has(id));
     if (legacy.length) await api.scripting.unregisterContentScripts({ ids: legacy });
-    const shortcutsNew = await setScript(SHORTCUT_SCRIPT_ID, wantShortcuts, current);
+    // The shortcut script also carries the wheel's relay for embedded frames (page-shortcuts.js).
+    const shortcutsNew = await setScript(SHORTCUT_SCRIPT_ID, wantShortcuts || wantOverlay, current);
     const overlayNew = await setScript(OVERLAY_SCRIPT_ID, wantOverlay, current);
     // Already-registered scripts pick up config changes through storage; only new ones need injecting.
     return { shortcuts: wantShortcuts, overlay: wantOverlay, state,

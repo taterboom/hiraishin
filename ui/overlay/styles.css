@@ -1,5 +1,8 @@
 :host { all: initial; }
-.backdrop { position: fixed; inset: 0; z-index: 2147483646; cursor: default; user-select: none; }
+/* Painted, if invisibly: the cover a relayed gesture puts up (main.tsx) draws nothing else, and
+   the compositor routes the pointer past an unpainted layer straight into a cross-site frame. */
+.backdrop { position: fixed; inset: 0; z-index: 2147483646; cursor: default; user-select: none;
+  background: rgba(0, 0, 0, .004); }
 /* left / top carry the wheel's centre; the transform pulls it back by half its own size.
    main.tsx keeps that centre far enough from every edge that a flick in any direction has room. */
 .wheel { position: fixed; width: 400px; height: 400px; transform: translate(-50%, -50%);

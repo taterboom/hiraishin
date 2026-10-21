@@ -31,6 +31,9 @@ export function createController(api, { license: licenseOptions } = {}) {
   // One short-lived, single-use close preview per source tab. A wheel gesture only prepares it.
   const overlayClosures = new Map();
   const popupClosures = new Map();
+  /** The latest wheel gesture each tab began inside an embedded frame: { id, frameId }. The top
+   *  frame runs the action, but a send reads the selection where the gesture started. */
+  const relayGestures = new Map();
 
   // Every settings read also sets the worker's language, so whatever runs next (a notification, a
   // menu title, an error) speaks the language the user picked, including right after a change.
@@ -420,6 +423,7 @@ export function createController(api, { license: licenseOptions } = {}) {
   }
 
   function removeTab(tabId, windowId) {
+    relayGestures.delete(tabId);
     return enqueue(async () => {
       const history = histories[windowId];
       if (history) histories[windowId] = pruneHistory(history, history.entries.filter(id => id !== tabId));
@@ -441,6 +445,10 @@ export function createController(api, { license: licenseOptions } = {}) {
     const tab = await api.tabs.get(sender.tab.id);
     if (!tab.active) return { status: 'ignored', message: '' };
     const ctx = { origin: 'web', tabId: tab.id, windowId: tab.windowId, frameId: sender.frameId };
+    // The wheel runs in the top frame only; embedded frames merely relay a gesture (onRelayConnect).
+    if (OVERLAY_MESSAGES.has(message.type) && sender.frameId !== 0 && !isExtensionPage(sender)) {
+      return { status: 'ignored', message: '' };
+    }
     if (message.type === 'web-shortcut') {
       const action = getAction(message.actionId, settings);
       if (!action?.web || settings.webShortcuts.bindings[action.id] !== message.combo) return { status: 'ignored', message: '' };
@@ -486,7 +494,9 @@ export function createController(api, { license: licenseOptions } = {}) {
           return { status: 'confirmation-required', confirmation: { token, count: tabIds.length } };
         });
       }
-      return runAction(action.id, { ...ctx, origin: 'overlay' });
+      const relayed = relayGestures.get(tab.id);
+      const frameId = relayed && message.gesture === relayed.id ? relayed.frameId : ctx.frameId;
+      return runAction(action.id, { ...ctx, frameId, origin: 'overlay' });
     }
     throw new Error(t('bg.error.panelOnly'));
   }
@@ -585,8 +595,55 @@ export function createController(api, { license: licenseOptions } = {}) {
     }
   }
 
+  /**
+   * A wheel gesture that began inside an embedded frame (page-shortcuts.js). The frame reports the
+   * flick, the release or a cancel over one port; each goes on to the tab's top frame, which draws
+   * the wheel and decides the sector from its own pointer. A port that closes before releasing
+   * cancels, so a frame that navigates or is removed mid-gesture cannot leave the wheel open.
+   */
+  function onRelayConnect(port) {
+    const sender = port.sender ?? {};
+    const tabId = sender.tab?.id;
+    if (port.name !== 'hiraishin-relay') return;
+    if (sender.id !== api.runtime.id || tabId === undefined || !sender.frameId || isExtensionPage(sender)) {
+      port.disconnect();
+      return;
+    }
+    const gesture = { id: crypto.randomUUID(), frameId: sender.frameId };
+    let started = false;
+    let ended = false;
+    const forward = message => api.tabs.sendMessage(tabId, { type: 'overlay-relay', gesture: gesture.id, ...message },
+      { frameId: 0 }).catch(() => {});
+    // One chain per port, so a release never overtakes the flick still being checked.
+    let chain = Promise.resolve();
+    const handle = async message => {
+      if (ended) return;
+      if (message?.kind === 'flick' && !started) {
+        const [settings, tab] = await Promise.all([settingsStore.get(), api.tabs.get(tabId).catch(() => null)]);
+        const x = Number(message.screenX);
+        const y = Number(message.screenY);
+        if (!settings.overlay.enabled || !tab?.active || !Number.isFinite(x) || !Number.isFinite(y)) { ended = true; return; }
+        started = true;
+        relayGestures.set(tabId, gesture);
+        // Screen and page pixels differ by the tab's zoom; the top frame converts with it.
+        const zoom = await api.tabs.getZoom(tabId).catch(() => 1);
+        await forward({ kind: 'flick', screenX: x, screenY: y, zoom });
+      } else if ((message?.kind === 'release' || message?.kind === 'cancel') && started) {
+        ended = true;
+        await forward({ kind: message.kind });
+      }
+    };
+    port.onMessage.addListener(message => { chain = chain.then(() => handle(message)).catch(() => {}); });
+    port.onDisconnect.addListener(() => {
+      chain = chain.then(async () => {
+        if (started && !ended) await forward({ kind: 'cancel' });
+        ended = true;
+      }).catch(() => {});
+    });
+  }
+
   return {
-    handleMessage, onActivated, removeTab, runAction,
+    handleMessage, onActivated, removeTab, runAction, onRelayConnect,
     ready: () => enqueue(async () => {
       const view = await afterSettingsChange();
       await transfer.purgeExpired();

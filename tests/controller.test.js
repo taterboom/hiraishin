@@ -234,7 +234,8 @@ test('wheel close only prepares a count; explicit confirmation closes the approv
   assert.deepEqual(env.data.removed, []);
   const approval = { id: 'close-right', token: preview.confirmation.token };
   await assert.rejects(env.message('overlay-confirm-action', { ...approval, token: 'wrong' }, pageSender(1)), /确认已失效/);
-  await assert.rejects(env.message('overlay-confirm-action', approval, { ...pageSender(1), frameId: 2 }), /确认已失效/);
+  // An embedded frame never reaches the wheel's messages at all, let alone its confirmation.
+  assert.deepEqual(await env.message('overlay-confirm-action', approval, { ...pageSender(1), frameId: 2 }), { status: 'ignored', message: '' });
   assert.deepEqual(env.data.removed, []);
   assert.equal((await env.message('overlay-confirm-action', approval, pageSender(1))).status, 'ok');
   assert.deepEqual(env.data.removed, [3, 4]);
@@ -506,6 +507,85 @@ test('context menu and wheel selections still send while retired floating-button
   assert.equal(wheel.status, 'sent');
   assert.equal(calls.filter(call => call.op === 'fill').at(-1).text, 'from wheel');
   assert.equal(await env.controller.onMenuClicked({ menuItemId: 'hiraishin-root' }, { id: 1, windowId: 1 }), null);
+});
+
+/** A runtime.Port as the service worker sees one an embedded frame opened. */
+function relayPort(sender, name = 'hiraishin-relay') {
+  const onMessage = [];
+  const onDisconnect = [];
+  const port = {
+    name, sender, disconnected: false,
+    onMessage: { addListener: fn => onMessage.push(fn) },
+    onDisconnect: { addListener: fn => onDisconnect.push(fn) },
+    disconnect: () => { port.disconnected = true; },
+    post: message => onMessage.forEach(fn => fn(message)),
+    close: () => onDisconnect.forEach(fn => fn(port)),
+  };
+  return port;
+}
+const frameSender = (tabId, frameId) => ({ id: 'ext', url: 'https://frame.example/embed', tab: { id: tabId }, frameId });
+const settle = () => new Promise(resolve => setTimeout(resolve, 20));
+const relayed = env => env.data.tabMessages.filter(item => item.message.type === 'overlay-relay');
+
+test('a gesture begun inside an embedded frame reaches the top frame, and a send reads that frame', async () => {
+  const env = browser({ granted: true,
+    tabs: [tab(1, 1, 0, true, { url: 'https://docs.example/a' }), tab(2, 1, 1, false, { url: 'https://claude.ai/new' })] });
+  env.data.zoom = 1.25;
+  env.data.adapter = async op => ({ probe: { state: 'ready', draft: '' }, fill: { ok: true }, submit: { submitted: true } }[op]);
+  env.data.selectionText = 'from the frame';
+  await env.ready();
+  const port = relayPort(frameSender(1, 3));
+  env.controller.onRelayConnect(port);
+  port.post({ kind: 'flick', screenX: 100, screenY: 200 });
+  port.post({ kind: 'release' });
+  await settle();
+  const messages = relayed(env);
+  assert.deepEqual(messages.map(item => item.message.kind), ['flick', 'release']);
+  assert.ok(messages.every(item => item.tabId === 1 && item.options?.frameId === 0), 'only the top frame hears the gesture');
+  assert.deepEqual([messages[0].message.screenX, messages[0].message.screenY, messages[0].message.zoom], [100, 200, 1.25]);
+  const gesture = messages[0].message.gesture;
+  assert.ok(gesture && messages[1].message.gesture === gesture);
+
+  const selectionFrames = () => env.data.executed.filter(item => item.op === 'selection').map(item => item.target.frameIds ?? null);
+  assert.equal((await env.message('overlay-action', { id: 'send-default-target', gesture }, pageSender(1))).status, 'sent');
+  assert.deepEqual(selectionFrames().at(-1), [3], 'the selection comes from the frame the gesture began in');
+  env.env.setActive(1);
+  await env.message('overlay-action', { id: 'send-default-target', gesture: 'not-this-one' }, pageSender(1));
+  assert.deepEqual(selectionFrames().at(-1), [0], 'an unknown gesture falls back to the top frame');
+});
+
+test('relay ports only count from embedded frames of the active tab, and closing one cancels', async () => {
+  const env = browser({ tabs: [tab(1, 1, 0, true), tab(2, 1, 1)] });
+  await env.ready();
+  const top = relayPort(frameSender(1, 0));
+  env.controller.onRelayConnect(top);
+  assert.equal(top.disconnected, true, 'the top frame draws the wheel itself');
+  const page = relayPort({ ...frameSender(1, 2), url: 'chrome-extension://ext/options.html' });
+  env.controller.onRelayConnect(page);
+  assert.equal(page.disconnected, true);
+  const other = relayPort(frameSender(1, 2), 'something-else');
+  env.controller.onRelayConnect(other);
+  assert.equal(other.disconnected, false, 'ports that are not the relay are left alone');
+
+  const background = relayPort(frameSender(2, 4));
+  env.controller.onRelayConnect(background);
+  background.post({ kind: 'flick', screenX: 1, screenY: 1 });
+  background.post({ kind: 'release' });
+  const early = relayPort(frameSender(1, 5));
+  env.controller.onRelayConnect(early);
+  early.post({ kind: 'release' });
+  await settle();
+  assert.deepEqual(relayed(env), [], 'a background tab and a release without a flick reach nothing');
+
+  const dropped = relayPort(frameSender(1, 6));
+  env.controller.onRelayConnect(dropped);
+  dropped.post({ kind: 'flick', screenX: 10, screenY: 20 });
+  dropped.close();
+  await settle();
+  assert.deepEqual(relayed(env).map(item => item.message.kind), ['flick', 'cancel'], 'a frame that vanishes mid-gesture closes the wheel');
+
+  assert.deepEqual(await env.message('overlay-state', {}, frameSender(1, 6)), { status: 'ignored', message: '' },
+    'embedded frames never talk to the wheel directly');
 });
 
 test('get-state exposes pinned actions with bindings, tasks and page readiness', async () => {

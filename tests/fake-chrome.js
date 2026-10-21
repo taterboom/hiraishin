@@ -18,7 +18,7 @@ export function createFakeChrome({
     groups: new Map(Object.entries(groups).map(([id, info]) => [Number(id), info])), nextGroupId: 100,
     nextTabId: Math.max(0, ...tabs.map(item => item.id)) + 1, nextWindowId: Math.max(0, ...tabs.map(item => item.windowId)) + 1,
     removed: [], updates: [], moves: [], created: [], notifications: [], menus: [], alarms: new Map(), scripts: new Map(),
-    executed: [], messages: [], lastFocusedWindow: tabs[0]?.windowId ?? 1, pingReply,
+    executed: [], messages: [], tabMessages: [], lastFocusedWindow: tabs[0]?.windowId ?? 1, pingReply,
     beforeGet: null, beforeUpdate: null, registerError: null, executeError: null,
     selectionText: '', adapter: null, onActivated: null, runtimeReply: { ok: true }, offscreenOpen: false,
   };
@@ -139,13 +139,15 @@ export function createFakeChrome({
         emitActivation({ tabId: copy.id, windowId: copy.windowId });
         return clone(copy);
       },
+      getZoom: async () => data.zoom ?? 1,
       group: async ({ tabIds, createProperties }) => {
         const groupId = data.nextGroupId++;
         for (const id of tabIds) { const item = find(id); item.groupId = groupId; if (createProperties?.windowId !== undefined) assert.equal(item.windowId, createProperties.windowId); }
         data.groups.set(groupId, { title: '', color: 'grey' });
         return groupId;
       },
-      sendMessage: async (tabId, message) => {
+      sendMessage: async (tabId, message, options) => {
+        data.tabMessages.push(clone({ tabId, message, options: options ?? null }));
         if (data.pingReply === null) throw new Error('Could not establish connection');
         return typeof data.pingReply === 'function' ? data.pingReply(tabId, message) : clone(data.pingReply);
       },

@@ -54,6 +54,12 @@ if (!guard.__hiraishinOverlay) {
   let pointerKnown = false;
   /** Armed while the position was unknown: the origin is the first sample of the movement. */
   let originPending = false;
+  /** A gesture an embedded frame relayed (page-shortcuts.js): where it began on the screen, and
+   *  how many of this page's pixels one screen pixel spans at the tab's zoom. */
+  let remote: { gesture: string; screenX: number; screenY: number; scale: number; placed: boolean } | null = null;
+  /** Covers the page from a relayed flick until the wheel opens, so the rest of the movement
+   *  lands in this document instead of the frame it started over. */
+  let catcher: HTMLElement | null = null;
   let config = { enabled: false, extensionPages: false, holdCode: 'auto', holdMs: 0 };
   /** Extension pages (the settings page) load this same bundle from a <script> tag: no content
    *  script, no host permission, and a separate flag in the published config. Browser pages such
@@ -80,9 +86,13 @@ if (!guard.__hiraishinOverlay) {
     shadow = host.attachShadow({ mode: 'closed' });
     const style = document.createElement('style');
     style.textContent = `${sharedMarkCss}\n${overlayCss}`;
+    catcher = document.createElement('div');
+    // Same cover as the open wheel's, which is what keeps a cross-site frame from taking the pointer.
+    catcher.className = 'backdrop';
+    catcher.style.display = 'none';
     mount = document.createElement('div');
     mount.lang = localeTag();
-    shadow.append(style, mount);
+    shadow.append(style, catcher, mount);
     (document.body || document.documentElement).append(host);
     root = createRoot(mount);
     return host;
@@ -118,7 +128,11 @@ if (!guard.__hiraishinOverlay) {
     const reply = await chrome.runtime.sendMessage({ type: 'overlay-state' }).catch(() => null);
     // A late state response must not reopen the wheel after release, Escape, or window blur.
     if (!armed || version !== gestureVersion) return;
-    if (!reply?.ok || !reply.state?.slots?.some((slot: ActionInfo | null) => slot)) return;
+    if (!reply?.ok || !reply.state?.slots?.some((slot: ActionInfo | null) => slot)) {
+      // Nothing to show: lift a relayed gesture's cover too, or it would swallow the page's clicks.
+      if (remote) hide();
+      return;
+    }
     state = reply.state;
     activeIndex = null;
     place();
@@ -138,6 +152,8 @@ if (!guard.__hiraishinOverlay) {
     open = false;
     activeIndex = null;
     confirmation = null;
+    remote = null;
+    if (catcher) catcher.style.display = 'none';
     if (host) host.style.display = 'none';
     // Render the cleared selection too: leaving it in the DOM would flash the last highlight for
     // one frame the next time the wheel opens.
@@ -151,7 +167,8 @@ if (!guard.__hiraishinOverlay) {
         void prepareClose();
         return;
       }
-      chrome.runtime.sendMessage({ type: 'overlay-action', id: action.id }).catch(() => {});
+      // A relayed gesture names itself, so a send reads the selection in the frame it began in.
+      chrome.runtime.sendMessage({ type: 'overlay-action', id: action.id, gesture: remote?.gesture }).catch(() => {});
     }
     hide();
   }
@@ -159,6 +176,9 @@ if (!guard.__hiraishinOverlay) {
   async function prepareClose() {
     cancelArm();
     clearHint();
+    // The card takes over from a relayed gesture: its key going up is no longer an ending.
+    remote = null;
+    if (catcher) catcher.style.display = 'none';
     open = false;
     activeIndex = null;
     const pending: CloseConfirmation = {
@@ -259,7 +279,23 @@ if (!guard.__hiraishinOverlay) {
     pointer.x = event.clientX;
     pointer.y = event.clientY;
     pointerKnown = true;
-    if (open) { pick(event.clientX, event.clientY); return; }
+    if (remote && event.isTrusted) {
+      // The hold key went up where this frame could not hear it (focus in the frame whose relay
+      // never reported back): end here rather than leave the page covered.
+      if (holdReleased(event)) { hide(); return; }
+      if (!remote.placed) {
+        remote.placed = true;
+        // Where the flick began, in this page's pixels: this sample, minus how far the pointer has
+        // travelled since on the screen both frames share.
+        origin.x = event.clientX - (event.screenX - remote.screenX) * remote.scale;
+        origin.y = event.clientY - (event.screenY - remote.screenY) * remote.scale;
+      }
+    }
+    if (open) {
+      if (__TRACE__) traceMove(event.clientX, event.clientY);
+      pick(event.clientX, event.clientY);
+      return;
+    }
     // No earlier sample reached us (an insecure page has no pointerrawupdate): this event is the
     // first known point of the movement, so it becomes the origin rather than opening the wheel.
     if (armed && originPending) { resolveOrigin(event.clientX, event.clientY); return; }
@@ -284,7 +320,7 @@ if (!guard.__hiraishinOverlay) {
       // Any other key means a real shortcut is being typed, not the gesture: disarm, and close an
       // already open panel without running anything.
       cancelArm();
-      if (open) hide();
+      if (open || remote) hide();
       return;
     }
     // A held modifier repeats; only the first press starts the timer.
@@ -313,7 +349,7 @@ if (!guard.__hiraishinOverlay) {
     if (!event.isTrusted || !isHoldKey(event, holdKey())) return;
     cancelArm();
     if (confirmation) { event.preventDefault(); return; }
-    if (!open) return;
+    if (!open) { if (remote) hide(); return; }
     // Releasing the key commits the highlighted action. Cancel the default too: on Windows and
     // Linux, releasing Alt alone otherwise opens Chrome's menu.
     event.preventDefault();
@@ -337,7 +373,7 @@ if (!guard.__hiraishinOverlay) {
       }
       return;
     }
-    if (!open) { cancelArm(); return; }
+    if (!open) { if (remote) hide(); else cancelArm(); return; }
     event.preventDefault();
     event.stopPropagation();
     if (event.button === 2) hide();
@@ -358,8 +394,36 @@ if (!guard.__hiraishinOverlay) {
     event.preventDefault();
     event.stopPropagation();
   }, true);
-  document.addEventListener('contextmenu', event => { if (open || confirmation) { event.preventDefault(); hide(); } }, true);
-  document.addEventListener('keydown', event => { if (open && event.key === 'Escape') { event.preventDefault(); hide(); } }, true);
+  document.addEventListener('contextmenu', event => { if (open || remote || confirmation) { event.preventDefault(); hide(); } }, true);
+  document.addEventListener('keydown', event => { if ((open || remote) && event.key === 'Escape') { event.preventDefault(); hide(); } }, true);
+
+  const MODIFIER_FLAGS: Record<string, 'metaKey' | 'altKey' | 'ctrlKey' | 'shiftKey'> = {
+    Meta: 'metaKey', Alt: 'altKey', Control: 'ctrlKey', Shift: 'shiftKey',
+  };
+  /** True when a modifier hold key shows as up on this event. A character key has no such flag. */
+  function holdReleased(event: MouseEvent) {
+    const flag = MODIFIER_FLAGS[holdKey()];
+    return Boolean(flag) && !event[flag];
+  }
+
+  /** Milestones of a gesture that started inside an embedded frame, passed on by the service
+   *  worker (controller.onRelayConnect). Only the extension itself can send these. */
+  chrome.runtime.onMessage.addListener((message, sender) => {
+    if (sender.id !== chrome.runtime.id || sender.tab || message?.type !== 'overlay-relay') return;
+    if (message.kind === 'flick') {
+      if (!armable() || open || opening || confirmation || !Number.isFinite(message.screenX) || !Number.isFinite(message.screenY)) return;
+      cancelArm();
+      remote = { gesture: String(message.gesture), screenX: message.screenX, screenY: message.screenY,
+        scale: 1 / (Number(message.zoom) || 1), placed: false };
+      armed = true;
+      ensureHost().style.display = 'block';
+      catcher!.style.display = 'block';
+      return;
+    }
+    if (!remote || message.gesture !== remote.gesture) return;
+    if (message.kind === 'release' && open) run(activeIndex);
+    else if (!confirmation) hide();
+  });
   // Leaving the window, the tab, or the page itself means the mouse may be anywhere next time.
   window.addEventListener('blur', () => { pointerKnown = false; cancelArm(); hide(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) { pointerKnown = false; hide(); } });

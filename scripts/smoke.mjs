@@ -60,7 +60,9 @@ await cp(OUT_DIR, EXT_DIR, { recursive: true });
 // closes on blur), and a backgrounded renderer stops evaluating, which looks like a hang.
 await writeFile(path.join(EXT_DIR, 'src/background.js'), await readFile(path.join(EXT_DIR, 'src/background.js'), 'utf8') +
   `\nglobalThis.__hiraishinTest = message => controller.handleMessage(message, { id: chrome.runtime.id, url: chrome.runtime.getURL('popup.html') })\n` +
-  `  .then(result => ({ ok: true, ...(result ?? {}) }), error => ({ ok: false, error: error.message || '操作失败，请重试。' }));\n`);
+  `  .then(result => ({ ok: true, ...(result ?? {}) }), error => ({ ok: false, error: error.message || '操作失败，请重试。' }));\n` +
+  // Counts embedded-frame relays: a pointer moving with no key held must open none.
+  `globalThis.__relayConnects = 0;\nchrome.runtime.onConnect.addListener(port => { if (port.name === 'hiraishin-relay') globalThis.__relayConnects++; });\n`);
 // The assertions read the Chinese copy, and Chrome for Testing's UI language depends on the
 // machine. Make Chinese the default preference in this copy only; a test that saves an explicit
 // locale still switches, and one that saves settings without a locale gets Chinese back.
@@ -101,6 +103,8 @@ const chrome = spawn(chromeBinary, [
   // The window is sized like a laptop's so the wheel is never squeezed against the edges.
   ...(process.env.HEADFUL ? [] : ['--headless=new', '--window-size=1200,900']), '--disable-gpu', `--remote-debugging-port=${PORT}`, '--remote-allow-origins=*',
   `--user-data-dir=${PROFILE}`, `--load-extension=${EXT_DIR}`, `--disable-extensions-except=${EXT_DIR}`,
+  // A second host name for the same server, so an embedded frame is cross-site (its own process).
+  '--host-resolver-rules=MAP frames.test 127.0.0.1',
   '--no-first-run', '--no-default-browser-check', 'about:blank',
 ], { stdio: 'ignore' });
 async function cleanup() {
@@ -692,6 +696,118 @@ try {
       : `chrome.storage.local.remove('license')`);
   }
 
+  // Pages that are almost entirely one iframe (an artifact, a hosted demo): the pointer is over the
+  // frame, and focus is either still on the page or inside the frame after a click. The keys and
+  // moves then reach the frame alone, and its relay must hand the gesture to the top frame's wheel.
+  const frameCases = [
+    ['cross-site', 'http://frames.test:8766/fixture.html?title=InnerCross', false],
+    ['cross-site', 'http://frames.test:8766/fixture.html?title=InnerCross', true],
+    ['same-origin', `${WWW}/fixture.html?title=InnerSame`, true],
+  ];
+  for (const [kind, src, focusInside] of frameCases) {
+    const label = `${kind} frame, focus ${focusInside ? 'inside it' : 'on the page'}`;
+    await overlayPage.send('Page.navigate', { url: `${WWW}/frames.html?title=Frames&src=${encodeURIComponent(src)}` });
+    await sleep(1500);
+    const view = await overlayPage.eval(`({ width: innerWidth, height: innerHeight })`);
+    const start = { x: Math.round(view.width / 2), y: Math.round(view.height / 2) + 20 };
+    const connectsBefore = await sw.eval('globalThis.__relayConnects');
+    await holdKey('keyUp');
+    for (let i = 0; i < 20; i++) await movePointer(start.x - 100 + i * 10, start.y);
+    const idleConnects = (await sw.eval('globalThis.__relayConnects')) - connectsBefore;
+    if (focusInside) {
+      await overlayPage.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: start.x, y: start.y, button: 'left', buttons: 1, clickCount: 1 });
+      await overlayPage.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: start.x, y: start.y, button: 'left', buttons: 0, clickCount: 1 });
+    }
+    let box = { missing: true };
+    for (let attempt = 0; attempt < 3 && box.missing; attempt++) {
+      await pressEscape();
+      await holdKey('keyUp');
+      await movePointer(start.x, start.y);
+      await sleep(250);
+      await holdKey('keyDown');
+      await sleep(300);
+      // The flick starts over the frame; once the page is covered, the rest of it lands on the page.
+      for (const dx of [10, 16, 22]) { await movePointer(start.x + dx, start.y); await sleep(250); }
+      await sleep(200);
+      box = await withTimeout(wheelBox(overlayPage), 5000, `measure the ${label} wheel`).catch(() => ({ missing: true }));
+    }
+    // With focus inside, the frame saw the key go down and the flick starts where the pointer
+    // rested; with focus on the page, the frame learns of the key from the first move, which is
+    // also where the top frame's own wheel would begin.
+    const began = focusInside ? start : { x: start.x + 10, y: start.y };
+    const offset = box.missing ? null : Math.round(Math.hypot(box.centerX - began.x, box.centerY - began.y));
+    let ran = false;
+    let tabsBeforeRun = null;
+    let tabsAfterRun = null;
+    if (!box.missing) {
+      tabsBeforeRun = await sw.eval(`chrome.tabs.query({ windowId: ${windowId} }).then(t => t.length)`);
+      const aim = await withTimeout(slotPointOf(overlayPage, 'duplicate-tab'), 5000, 'find the duplicate badge over a frame');
+      await movePointer(aim.x, aim.y);
+      await sleep(300);
+      await holdKey('keyUp');
+      await sleep(900);
+      tabsAfterRun = await sw.eval(`chrome.tabs.query({ windowId: ${windowId} }).then(t => t.length)`);
+      ran = tabsAfterRun === tabsBeforeRun + 1;
+    }
+    (idleConnects === 0 && offset !== null && offset <= 10 && ran)
+      ? pass(`a wheel gesture over a ${label} opens where it began and runs on release`)
+      : fail(`wheel over a ${label}`, JSON.stringify({ idleConnects, box, began, offset, tabsBeforeRun, tabsAfterRun }));
+    await sw.eval(`(async () => { const tabs = await chrome.tabs.query({ windowId: ${windowId} });
+      for (const extra of tabs.filter(t => t.id !== ${overlayTab} && t.url.includes('title=Frames'))) await chrome.tabs.remove(extra.id);
+      await chrome.tabs.update(${overlayTab}, { active: true }); })()`);
+    await overlayPage.send('Page.bringToFront').catch(() => {});
+    await sleep(300);
+  }
+
+  // A wheel summoned on the page itself, then pointed past its rim at a spot over a cross-site
+  // frame: selection only looks at direction, so it must keep following the pointer there.
+  {
+    await overlayPage.send('Page.navigate', { url: `${WWW}/frames.html?title=Frames&src=${encodeURIComponent('http://frames.test:8766/fixture.html?title=InnerUnder')}` });
+    await sleep(1500);
+    const opened = await summon({ x: 300, y: 20 }, { x: 310, y: 20 });
+    const box = await withTimeout(wheelBox(overlayPage), 5000, 'measure the wheel above a frame').catch(() => ({ missing: true }));
+    let highlighted = null;
+    if (!box.missing) {
+      // Straight right of the centre and well outside the wheel: over the frame, pointing at the
+      // right-hand sector.
+      await movePointer(box.centerX + 300, box.centerY);
+      await sleep(300);
+      highlighted = (await withTimeout(piercedRows(overlayPage), 5000, 'read the highlight above a frame'))
+        .filter(row => row.active === 'true').map(row => row.id);
+    }
+    await pressEscape();
+    await holdKey('keyUp');
+    (opened.shown === 'block' && highlighted?.length === 1 && highlighted[0] === 'activate-right-tab')
+      ? pass('a wheel opened on the page keeps following the pointer over a cross-site frame')
+      : fail('wheel above a cross-site frame', JSON.stringify({ opened, box, highlighted }));
+  }
+
+  // A frame that disappears mid-gesture must not leave the page covered.
+  {
+    await overlayPage.send('Page.navigate', { url: `${WWW}/frames.html?title=Frames&src=${encodeURIComponent('http://frames.test:8766/fixture.html?title=InnerGone')}` });
+    await sleep(1500);
+    const view = await overlayPage.eval(`({ width: innerWidth, height: innerHeight })`);
+    const start = { x: Math.round(view.width / 2), y: Math.round(view.height / 2) + 20 };
+    await overlayPage.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: start.x, y: start.y, button: 'left', buttons: 1, clickCount: 1 });
+    await overlayPage.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: start.x, y: start.y, button: 'left', buttons: 0, clickCount: 1 });
+    await holdKey('keyUp');
+    await movePointer(start.x, start.y);
+    await sleep(250);
+    await holdKey('keyDown');
+    await sleep(300);
+    for (const dx of [10, 16, 22]) { await movePointer(start.x + dx, start.y); await sleep(250); }
+    await sleep(200);
+    const opened = await readHost();
+    await overlayPage.eval(`document.getElementById('embed').remove()`);
+    await sleep(800);
+    const after = await readHost();
+    await holdKey('keyUp');
+    (opened.shown === 'block' && after.shown === 'none')
+      ? pass('removing the frame a gesture began in closes the wheel')
+      : fail('wheel after its frame is removed', JSON.stringify({ opened, after }));
+  }
+  await overlayPage.send('Page.navigate', { url: `${WWW}/fixture.html?title=Overlay` });
+  await sleep(1200);
   await sleep(400);
 
   // A destructive wheel gesture only opens a confirmation. Exercise both release and click,
