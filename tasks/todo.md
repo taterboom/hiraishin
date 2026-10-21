@@ -344,3 +344,66 @@
 - 截图复核：设置页日文 / 英文、popup 英文、日文落地页，无溢出与错位。
 - 冒烟有两次失败来自窗口焦点被抢（轨迹里有连串 blur / focus），与改动无关；另一次是新断言复用了后台 popup 页面，已改为新开前台标签页。
 - 待用户决定：网站 / llms.txt / 商店文案仍写「免费、没有服务器」，而隐私页已描述试用、付费授权与授权服务器，三语需统一口径；商店截图与宣传图目前只有中文。
+
+# 多级按钮 · 副轮盘（2026-10-19，/deepen 后用户确认）
+
+参考：figma轮盘.png。一句话：在一次按住加甩动的手势里抵达更多动作，不破坏「只看方向」的肌肉记忆和防误触。
+
+## 决定（用户确认）
+- 停在母瓣上松键：执行母动作。副弧正中那格就是母动作，和母瓣同方向，甩过头也安全；旧配置的一级行为逐字不变。
+- 子级判定：同一圆心看角度（Figma 式）。规则「距离决定第几层，方向决定选哪个」，写进 R50，并说明与 R45 的关系。
+- 容量：只有 8 等分时允许挂子级，只挂一层；首版只开放上下左右四个正向母瓣，每个最多 3 个子项（含正中的母动作）；close-right 不允许放进第二层。
+- 进出第二层靠越线触发，带滞回（初值：越过 OUTER+24 进入，退回 OUTER−16 以内回到第一层），最终阈值由真实轨迹分布决定。
+
+## 步骤
+- [ ] 轨迹采集：临时在 overlay 记录 `(t, x, y, keyup)`，导出到本地；统计一级甩动越过 184px 的比例与最大过冲距离，据此定进出阈值；挑若干条做成回放夹具
+  - [x] 录制器 `ui/overlay/trace.ts`：只在 `HIRAISHIN_TRACE=1` 构建时编入；check 断言正式包不含它（已反向验证能拦住）；关掉变量名压缩后，正式包与改动前逐字节一致
+  - [x] 分析脚本 `scripts/trace-stats.mjs`：输出最远距离分位数、越过 184/208/232px 的比例、松键前 80ms 内选中项变化的次数、贴边召出时预选错瓣的次数、各方向统计
+  - [x] 冒烟：录制版构建下断言手势确实被记录（14 次）
+  - [ ] 用户本人正常使用一段时间，导出数据并定阈值
+- [ ] 读 usage 计数（overlay 来源），决定哪些动作下沉、默认挂在哪些母瓣下
+- [ ] 修贴边召出的判定：方向和距离按起甩点 `origin` 计算，画面仍然夹进视口；为现有一级轮盘补上四个角召出的冒烟断言（先确认能复现问题，再修）
+- [ ] 抽出纯函数手势 reducer（含 level、母瓣锁定、滞回、`subAt`），`sectorAt` 不改；用轨迹夹具和边界用例做单测
+- [ ] 数据模型：`overlay.children` 作为旁路字段（与 slots 等长，每项最多 3 个），`slots` 保持字符串数组；归一化、迁移、测试
+- [ ] 后台：controller 的白名单要包含子动作（目前 controller.js:454 只认 slots）
+- [ ] 网页轮盘：副弧渲染，复用同一套磨砂样式，玻璃层单独做；元素带 `data-path`
+- [ ] popup 点击式轮盘与设置页：定义点击母瓣时的行为（执行母动作，另有入口展开子项），设置页可以给母瓣指派子项
+- [ ] 冒烟改用 `data-path` 定位；新增二级手势断言；反向测试：把判定改回只看方位，确认测试变红
+- [ ] 文档：spec R50、README、ARCHITECTURE；顺带把死区数字统一为 40
+
+## 完成判定
+- 旧配置下所有一级手势结果不变（冒烟）
+- 轨迹回放：一级过冲误入第二层 0 次；四个角落召出时不会凭空进入第二层
+- 三处界面共用同一个 reducer 和同一套 `data-path`
+- npm test / check / smoke 全部通过，并截图确认视觉
+
+# 网页轮盘支持大面积 iframe 页面（2026-10-20，/deepen 后用户确认）
+
+问题：轮盘脚本只在顶层 frame（`src/shortcuts.js` 的 `ALL_FRAMES`）。指针在 iframe 上或焦点在 iframe 里时，按键和鼠标事件只发到 iframe，顶层看不到，轮盘召不出来（例：claude.ai artifact）。
+一句话：把子 frame 里的「按住加甩动」手势，安全、低延迟地交给顶层去画轮盘和执行。
+排在副轮盘之前做，两者改的是同一块手势代码。
+
+## 决定（用户确认）
+- 中继并入 `src/page-shortcuts.js`（它已在所有 frame 运行，带 ping 应答和重载后自清理）；注册条件改为「有网页快捷键或轮盘开启」；顶层 frame 里中继什么都不做；不按修饰键时 `mousemove` 立即返回，不发消息。
+- 中继消息只带「开始甩动 / 松键 / 取消 / 失焦」，不带动作 id；经 `runtime.connect` 端口发给后台，后台按「手势会话 + sender.frameId + documentId + 标签页在前台」校验后，用 `tabs.sendMessage(tabId, msg, { frameId: 0 })` 转给顶层。
+- 原点：屏幕坐标差值换算。中继记下起甩点的 screenX/Y；顶层收到「开始甩动」后铺全屏遮罩，以遮罩上第一个真实事件的 clientX − (screenX − 起甩点 screenX) 反推原点，之后的移动由顶层处理。只按住键时不铺遮罩。
+- Windows：松开 Alt 时，中继在 iframe 里同步 `preventDefault`，不等消息往返。
+- 三道防卡死：转发 iframe 的 blur；顶层鼠标事件上 `altKey`/`metaKey` 变为 false 即收尾（非修饰键触发另加超时）；端口断开立即取消。
+- 发送选区读手势所在的 frame（frameId 由后台从 sender 取，不信消息自报）。
+- `matchOriginAsFallback`：等用户在 artifact 页面查完 iframe 类型再定（srcdoc / sandbox / about:blank 需要它，普通 https 跨域 iframe 不需要）。
+
+## 步骤
+- [x] `matchOriginAsFallback`：用户选择先不开，做完后在 artifact 页面实测再定
+- [x] 中继：并入 page-shortcuts.js，识别按住 + 越过 FLICK_START、松键、其他键 / Esc、blur；按 buttons≠0（拖动中）放弃；焦点在顶层时从鼠标事件的修饰键标志上膛
+- [x] 后台：手势会话与 sender 校验、端口断开处理、转发到 frameId 0；overlay-* 消息只接受顶层 frame（扩展自己的页面除外）（未用 documentId，顶层中途跳转时消息落空，靠端口断开和修饰键检查收尾）
+- [x] 顶层：接收中继事件、铺遮罩、屏幕坐标换算原点、altKey 收尾；复用现有 pick / run；关闭确认出现时撤掉遮罩
+- [x] 发送选区：runAction 的 frameId 用手势所在 frame
+- [x] shortcuts.js：注册条件与 ALL_FRAMES 注释同步
+- [x] 冒烟：同源与跨站（frames.test 对 127.0.0.1）iframe 测试页；召出、松键执行、不按键 0 次连接、iframe 中途移除自动收尾、原点误差 ≤ 10px（实测 0px）；遮罩底色做过反向验证（Esc 取消未单独断言）
+- [x] 在登录的 claude.ai artifact 页面实测：用户 2026-10-21 确认可用，因此不开 `matchOriginAsFallback`
+- [ ] Windows 实机确认松 Alt 不弹菜单（未验证）
+- [x] 文档：site/privacy.html（三语）「键盘与鼠标事件」一行、STORE_LISTING（三语）、ARCHITECTURE、spec R50
+
+## 未采纳（不实现）
+- 单独先修 `main.tsx` mousemove / mousedown 缺少的 isTrusted 检查（安全子代理发现，已核实）
+- 中继延迟与 service worker 冷启动测量
