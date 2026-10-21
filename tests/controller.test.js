@@ -210,6 +210,7 @@ test('the settings page drives the same wheel, and its other messages stay on th
   await env.ready();
   const { state } = await env.message('overlay-state', {}, optionsSender);
   assert.deepEqual(state.slots.map(slot => slot?.id ?? null), ['activate-right-tab', 'duplicate-tab', null, null]);
+  assert.equal(state.locked, null, 'a running trial leaves the wheel unlocked');
   assert.equal((await env.message('overlay-action', { id: 'activate-right-tab' }, optionsSender)).status, 'ok');
   assert.equal(env.active(1), 3, 'the wheel acted on the window the settings page sits in');
   assert.equal((await env.message('get-settings', {}, optionsSender)).settings.overlay.enabled, true,

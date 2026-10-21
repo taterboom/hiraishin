@@ -41,6 +41,7 @@ export default {
   'overlay.wheel.closeRight': '关闭右侧 {count} 个标签页',
   'overlay.wheel.idleTitle': '松开取消',
   'overlay.wheel.idleHint': '甩向某一瓣选择',
+  'overlay.wheel.lockedHint': '到设置页购买或激活',
   'overlay.wheel.confirmHint': '松开后确认',
   'overlay.confirm.eyebrow': '关闭标签页',
   'overlay.confirm.title': '将关闭右侧 {count} 个标签页',

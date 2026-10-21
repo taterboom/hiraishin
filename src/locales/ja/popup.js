@@ -41,6 +41,7 @@ export default {
   'overlay.wheel.closeRight': '右側のタブ {count} 個を閉じる',
   'overlay.wheel.idleTitle': '離してキャンセル',
   'overlay.wheel.idleHint': 'セクターの方向にはじいて選択',
+  'overlay.wheel.lockedHint': '設定で購入・有効化',
   'overlay.wheel.confirmHint': '離した後に確認',
   'overlay.confirm.eyebrow': 'タブを閉じる',
   'overlay.confirm.title': '右側のタブ {count} 個を閉じます',

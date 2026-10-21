@@ -660,6 +660,37 @@ try {
     if (extra.length > 1) await chrome.tabs.remove(extra[extra.length - 1].id);
     await chrome.tabs.update(${overlayTab}, { active: true }); })()`);
   await overlayPage.send('Page.bringToFront').catch(() => {});
+
+  // Trial over: the wheel still opens, but says why and runs nothing. It used to rely on a system
+  // notification alone, and with those switched off a release did nothing without a word.
+  const savedLicense = await sw.eval(`chrome.storage.local.get('license').then(r => r.license ?? null)`);
+  await sw.eval(`chrome.storage.local.set({ license: { version: 1, trialStartedAt: Date.now() - 15 * 86400000 } })`);
+  try {
+    await summon(openSpace);
+    const lockAim = await withTimeout(slotPointOf(overlayPage, 'duplicate-tab'), 5000, 'find the duplicate badge while locked');
+    await movePointer(lockAim.x, lockAim.y);
+    await sleep(300);
+    const [hub] = await withTimeout(piercedRows(overlayPage, entry => entry.class === 'hub'), 5000, 'find the hub');
+    const hubText = hub ? await (async () => {
+      const { object } = await overlayPage.send('DOM.resolveNode', { nodeId: hub.nodeId });
+      const { result } = await overlayPage.send('Runtime.callFunctionOn', { objectId: object.objectId, returnByValue: true,
+        functionDeclaration: 'function () { return this.textContent; }' });
+      return result.value;
+    })() : null;
+    const badge = (await piercedRows(overlayPage, entry => entry['data-action'] === 'duplicate-tab'))[0];
+    await holdKey('keyUp');
+    await sleep(800);
+    const tabsWhileLocked = await sw.eval(`chrome.tabs.query({ windowId: ${windowId} }).then(t => t.length)`);
+    const { DICTIONARIES } = await import('../src/locales/index.js');
+    const expired = Object.values(DICTIONARIES).map(dictionary => dictionary['popup.license.expired']);
+    (expired.some(text => hubText?.includes(text)) && badge?.['data-disabled'] === 'true' && tabsWhileLocked === tabsBefore)
+      ? pass('after the trial ends, the wheel says so in its centre and a release runs nothing')
+      : fail('locked wheel', JSON.stringify({ hubText, expired, disabled: badge?.['data-disabled'], tabsBefore, tabsWhileLocked }));
+  } finally {
+    await sw.eval(savedLicense ? `chrome.storage.local.set({ license: ${JSON.stringify(savedLicense)} })`
+      : `chrome.storage.local.remove('license')`);
+  }
+
   await sleep(400);
 
   // A destructive wheel gesture only opens a confirmation. Exercise both release and click,

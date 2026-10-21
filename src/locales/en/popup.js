@@ -43,6 +43,7 @@ export default {
   'overlay.wheel.closeRight.one': 'Close {count} tab to the right',
   'overlay.wheel.idleTitle': 'Release to cancel',
   'overlay.wheel.idleHint': 'Flick toward a sector to choose',
+  'overlay.wheel.lockedHint': 'Buy or activate in Settings',
   'overlay.wheel.confirmHint': 'Release, then confirm',
   'overlay.confirm.eyebrow': 'Close tabs',
   'overlay.confirm.title': 'Close {count} tabs to the right',

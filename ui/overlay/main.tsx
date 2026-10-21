@@ -94,8 +94,12 @@ if (!guard.__hiraishinOverlay) {
     flushSync(() => root!.render(
       confirmation ? <Confirmation state={confirmation} onCancel={hide} onConfirm={() => { void confirmClose(); }} />
       : <Wheel slots={state!.slots} activeIndex={activeIndex} position={position}
-        hint={t('overlay.hint.release')} showHint={open && hintVisible} rightCount={state!.rightCount}
-        unavailable={action => unavailableReason(action, state!)} />,
+        hint={t('overlay.hint.release')} rightCount={state!.rightCount}
+        unavailable={action => unavailableReason(action, state!)}
+        // Locked, a quick flick must not end in silence: show why straight away, not after a dwell.
+        showHint={open && (hintVisible || Boolean(state!.locked))}
+        idleTitle={state!.locked ? t(`popup.license.${state!.locked}`) : undefined}
+        idleHint={state!.locked ? t('overlay.wheel.lockedHint') : undefined} />,
     ));
   }
 

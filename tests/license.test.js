@@ -83,6 +83,9 @@ test('an expired trial refuses every path that performs an operation, and counts
   const before = { tabs: structuredClone(env.data.tabs), updates: env.data.updates.length, executed: env.data.executed.length };
   const locked = new RegExp(lockedMessage().slice(0, 5));
 
+  // The wheel learns it is locked before the flick, so it can say why instead of doing nothing.
+  assert.equal((await env.message('overlay-state', {}, pageSender(1))).state.locked, 'expired');
+
   // runAction entries return a refusal; command, web and overlay entries also notify.
   assert.equal((await env.controller.onCommand('duplicate-tab', { id: 1, windowId: 1 })).status, 'license-required');
   assert.equal((await env.message('run-action', { id: 'duplicate-tab', windowId: 1 })).status, 'license-required');

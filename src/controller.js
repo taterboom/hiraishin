@@ -356,8 +356,12 @@ export function createController(api, { license: licenseOptions } = {}) {
   async function overlayState(ctx) {
     const settings = await settingsStore.get();
     const { tabs, active, history } = await windowContext(ctx.windowId);
-    const [{ actions, status }, targetList] = await Promise.all([describeActions(settings), describeTargets(settings)]);
+    const [{ actions, status }, targetList, licenseView] = await Promise.all([
+      describeActions(settings), describeTargets(settings), license.status()]);
     return { state: {
+      // Every action would be refused: the wheel says so itself, since a system notification
+      // can be switched off and then a release would do nothing without a word.
+      locked: licenseView.allowed ? null : licenseView.state,
       // One entry per wheel sector, clockwise from twelve o'clock; an empty sector stays null.
       slots: settings.overlay.slots.map(id => {
         const action = id ? actions.find(item => item.id === id) : null;
