@@ -1214,6 +1214,14 @@ try {
 if (results.some(result => result[0] === 'FAIL') && overlayInputTrace) {
   console.log('overlay input trace:', JSON.stringify(await overlayInputTrace().catch(error => ({ error: String(error) }))));
 }
+// HIRAISHIN_TRACE=1 builds record wheel gestures (ui/overlay/trace.ts); the flicks above must be among them.
+if (process.env.HIRAISHIN_TRACE === '1') {
+  const traces = await sw.eval(`chrome.storage.local.get(null).then(all => Object.entries(all)
+    .filter(([key]) => key.startsWith('hiraishin-trace:')).map(([, value]) => value))`).catch(() => []);
+  traces.some(trace => trace.end?.kind === 'release' && trace.end.action && trace.samples.length > 1)
+    ? pass(`gesture recorder stored ${traces.length} wheel gestures`)
+    : fail('gesture recorder', JSON.stringify(traces).slice(0, 500));
+}
 popup.exceptions.length === 0 ? pass('popup: no exceptions') : fail('popup exceptions', popup.exceptions.join(' | '));
 sw.exceptions.length === 0 ? pass('service worker: no exceptions') : fail('service worker exceptions', sw.exceptions.join(' | '));
 popup.close(); sw.close();

@@ -5,6 +5,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import { WHEEL_SIZE, Wheel, sectorAt } from './Wheel';
 import { Confirmation, type CloseConfirmation } from './Confirmation';
+import { traceEnd, traceMove, traceOpen } from './trace';
 import { MODIFIER_KEYS, isHoldKey, otherModifierDown, resolveHoldCode } from '../../src/keys.js';
 import { LOCALE_TAGS, getLocale, setLocale, t } from '../../src/i18n.js';
 import { unavailableReason, type AvailabilityState } from '../shared/availability';
@@ -121,11 +122,13 @@ if (!guard.__hiraishinOverlay) {
     open = true;
     scheduleHint();
     render();
+    if (__TRACE__) traceOpen(origin, { x: position.left, y: position.top }, pointer, state!.slots.length);
     // The flick that revealed the wheel is part of the gesture, so it selects straight away.
     pick(pointer.x, pointer.y);
   }
 
   function hide() {
+    if (__TRACE__) traceEnd('cancel', activeIndex);
     cancelArm();
     clearHint();
     open = false;
@@ -310,6 +313,7 @@ if (!guard.__hiraishinOverlay) {
     // Releasing the key commits the highlighted action. Cancel the default too: on Windows and
     // Linux, releasing Alt alone otherwise opens Chrome's menu.
     event.preventDefault();
+    if (__TRACE__) traceEnd('release', activeIndex, state?.slots);
     run(activeIndex);
   }, true);
 
@@ -339,6 +343,7 @@ if (!guard.__hiraishinOverlay) {
       pointer.y = event.clientY;
       pointerKnown = true;
       pick(event.clientX, event.clientY);
+      if (__TRACE__) traceEnd('click', activeIndex, state?.slots);
       run(activeIndex);
     }
   }, true);

@@ -73,7 +73,11 @@ const overlayOptions = {
   outdir: OUT_DIR, bundle: true, format: 'iife', target: ['chrome121'], jsx: 'automatic',
   loader: { '.css': 'text' }, minify: !watch, sourcemap: watch ? 'inline' : false,
   legalComments: 'none', logLevel: 'info',
-  define: { 'process.env.NODE_ENV': JSON.stringify(watch ? 'development' : 'production') },
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(watch ? 'development' : 'production'),
+    // HIRAISHIN_TRACE=1 records wheel gestures for threshold tuning (ui/overlay/trace.ts).
+    __TRACE__: JSON.stringify(process.env.HIRAISHIN_TRACE === '1'),
+  },
 };
 
 const uiOptions = {

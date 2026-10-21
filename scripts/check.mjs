@@ -8,6 +8,10 @@ import { buildAll, OUT_DIR } from './build.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 await buildAll();
 const dist = `${OUT_DIR}/`;
+// The gesture recorder is a local tuning aid; it must never reach a build that could ship.
+// The marker is TRACE_PREFIX in ui/overlay/trace.ts.
+assert.ok(!(await readFile(`${dist}ui/overlay.js`, 'utf8')).includes('hiraishin-trace:'),
+  'ui/overlay.js contains the gesture recorder: rebuild without HIRAISHIN_TRACE=1');
 const manifest = JSON.parse(await readFile(new URL('../manifest.json', import.meta.url), 'utf8'));
 assert.equal(manifest.manifest_version, 3);
 assert.equal(manifest.background.type, 'module');
