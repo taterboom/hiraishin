@@ -1166,7 +1166,9 @@ try {
     for (let i = 0; i < 30 && !document.querySelector('.wheel-stage'); i++) await new Promise(r => setTimeout(r, 100));
     const stage = document.querySelector('.wheel-stage');
     const box = stage.getBoundingClientRect();
-    const angle = (120 * Math.PI) / 180;   // sector 2 of 6, clockwise from twelve o'clock
+    // The centre of sector 2, clockwise from twelve o'clock, for whatever sector count is set.
+    const count = document.querySelectorAll('.wheel-stage .sector').length;
+    const angle = (2 * (360 / count) * Math.PI) / 180;
     stage.dispatchEvent(new MouseEvent('click', { bubbles: true,
       clientX: box.left + box.width / 2 + 90 * Math.sin(angle),
       clientY: box.top + box.height / 2 - 90 * Math.cos(angle) }));
@@ -1203,7 +1205,8 @@ try {
     info.editorRemains = Boolean(document.querySelector('.wheel-stage'));
     return info;
   })()`);
-  (editor.sectors === 6 && editor.chosen === 'switch-previous-tab' && editor.gestureHidden && editor.editorRemains)
+  (editor.sectors === settingsView.settings.overlay.slots.length && editor.chosen === editor.initialActions[2]
+    && editor.gestureHidden && editor.editorRemains)
     ? pass('the wheel editor keeps working with web gestures disabled')
     : fail('wheel editor', JSON.stringify(editor));
   const repeatedActions = [...editor.initialActions];
@@ -1250,7 +1253,7 @@ try {
     return { allSectors, cancelUnchanged, replaced, emptySelectable, assignedEmpty };
   })()`);
   const positionTabsAfter = await sw.eval('chrome.tabs.query({}).then(t => t.length)');
-  (positionPicker.allSectors === 6 && positionPicker.cancelUnchanged && positionPicker.replaced
+  (positionPicker.allSectors === editor.sectors && positionPicker.cancelUnchanged && positionPicker.replaced
     && positionPicker.emptySelectable && positionPicker.assignedEmpty
     && positionTabsBefore === positionTabsAfter)
     ? pass('dedicated position column assigns occupied and empty sectors, allows cancellation, and never executes dangerous actions')
