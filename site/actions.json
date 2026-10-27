@@ -1,6 +1,6 @@
 {
   "name": "Hiraishin",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Hold Option / Alt and flick for a radial menu: switch, tidy and copy tabs, and send selected text to ChatGPT / Claude.",
   "homepage": "https://hiraishin.44san.com/",
   "minimumChrome": "121",
