@@ -104,7 +104,7 @@ const chrome = spawn(chromeBinary, [
   ...(process.env.HEADFUL ? [] : ['--headless=new', '--window-size=1200,900']), '--disable-gpu', `--remote-debugging-port=${PORT}`, '--remote-allow-origins=*',
   `--user-data-dir=${PROFILE}`, `--load-extension=${EXT_DIR}`, `--disable-extensions-except=${EXT_DIR}`,
   // A second host name for the same server, so an embedded frame is cross-site (its own process).
-  '--host-resolver-rules=MAP frames.test 127.0.0.1',
+  '--host-resolver-rules=MAP frames.test 127.0.0.1, MAP nested.test 127.0.0.1',
   '--no-first-run', '--no-default-browser-check', 'about:blank',
 ], { stdio: 'ignore' });
 async function cleanup() {
@@ -703,6 +703,11 @@ try {
     ['cross-site', 'http://frames.test:8766/fixture.html?title=InnerCross', false],
     ['cross-site', 'http://frames.test:8766/fixture.html?title=InnerCross', true],
     ['same-origin', `${WWW}/fixture.html?title=InnerSame`, true],
+    // A frame inside a frame, each from another site (three processes).
+    ['nested cross-site', `http://frames.test:8766/frames.html?title=Middle&src=${encodeURIComponent('http://nested.test:8766/fixture.html?title=InnerNested')}`, true],
+    ['nested cross-site', `http://frames.test:8766/frames.html?title=Middle&src=${encodeURIComponent('http://nested.test:8766/fixture.html?title=InnerNested')}`, false],
+    // The inner frame has no URL of its own (srcdoc).
+    ['nested inline', 'http://frames.test:8766/frames.html?title=Middle&srcdoc=1', true],
   ];
   for (const [kind, src, focusInside] of frameCases) {
     const label = `${kind} frame, focus ${focusInside ? 'inside it' : 'on the page'}`;

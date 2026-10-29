@@ -98,6 +98,9 @@ test('the wheel runs only in the top frame while web shortcuts cover every frame
   assert.equal(env.data.scripts.get(OVERLAY_SCRIPT_ID).allFrames, false);
   assert.equal(env.data.scripts.get(OVERLAY_SCRIPT_ID).runAt, 'document_start');
   assert.equal(env.data.scripts.get(SHORTCUT_SCRIPT_ID).allFrames, true);
+  assert.equal(env.data.scripts.get(SHORTCUT_SCRIPT_ID).matchOriginAsFallback, true,
+    'srcdoc and about:blank frames, such as an inline preview nested in another frame, get the relay too');
+  assert.equal(env.data.scripts.get(OVERLAY_SCRIPT_ID).matchOriginAsFallback, false);
   await service.injectExisting(wanted.inject);
   const byFile = Object.fromEntries(env.data.executed.map(item => [item.files[0], item.target.allFrames]));
   assert.deepEqual(byFile, { 'src/page-shortcuts.js': true, 'ui/overlay.js': false });
@@ -111,4 +114,14 @@ test('a wheel registered by an older version in every frame is narrowed to the t
   const wanted = await service.sync();
   assert.equal(env.data.scripts.get(OVERLAY_SCRIPT_ID).allFrames, false);
   assert.equal(wanted.inject.overlay, false, 'an existing registration is corrected in place, not re-injected');
+});
+
+test('a shortcut script registered before frames without a URL were covered is widened in place', async () => {
+  const env = createFakeChrome({ granted: true, tabs: [tab(1, 1, 0, true)] });
+  env.data.scripts.set(SHORTCUT_SCRIPT_ID, { id: SHORTCUT_SCRIPT_ID, js: ['src/page-shortcuts.js'], matches: ['http://*/*', 'https://*/*'],
+    allFrames: true, runAt: 'document_start', persistAcrossSessions: true });
+  const service = createShortcutService(env.api, { settingsStore: createSettingsStore(env.api), listActionsFor: listActions });
+  const wanted = await service.sync();
+  assert.equal(env.data.scripts.get(SHORTCUT_SCRIPT_ID).matchOriginAsFallback, true);
+  assert.equal(wanted.inject.shortcuts, false, 'corrected in place, not re-injected');
 });

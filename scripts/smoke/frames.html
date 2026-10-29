@@ -1,9 +1,13 @@
 <!doctype html><html><head><meta charset="utf-8"><title>Hiraishin frames</title>
 <style>html, body { margin: 0; height: 100%; } header { height: 40px; background: #eee; font: 14px/40px sans-serif; padding: 0 12px; }
   iframe { display: block; width: 100%; height: calc(100% - 40px); border: 0; }</style></head>
-<!-- Almost all of the page is one embedded frame, the way an artifact or a hosted demo is shown. -->
+<!-- Almost all of the page is one embedded frame, the way an artifact or a hosted demo is shown.
+     `src` may point at this page again to nest frames; `srcdoc=1` writes the frame inline instead,
+     with no URL of its own, the way sandboxed previews often do. -->
 <body><header>Embedded page</header><iframe id="embed"></iframe>
 <script>const params = new URL(location.href).searchParams;
 document.title = params.get('title') || 'Hiraishin frames';
-document.getElementById('embed').src = params.get('src');</script>
+const embed = document.getElementById('embed');
+if (params.get('srcdoc')) embed.srcdoc = '<!doctype html><body style="margin:0;height:100vh;font:15px sans-serif">Inline frame</body>';
+else embed.src = params.get('src');</script>
 </body></html>

@@ -21,6 +21,13 @@ const ALL_FRAMES = {
   [SHORTCUT_SCRIPT_ID]: true,
   [OVERLAY_SCRIPT_ID]: false,
 };
+// A frame with no URL of its own (srcdoc, about:blank, blob:) is only matched through the page
+// that created it. Inline editors and sandboxed previews, often nested inside another frame, are
+// such frames, and the shortcut script has to reach them, relay included.
+const ORIGIN_FALLBACK = {
+  [SHORTCUT_SCRIPT_ID]: true,
+  [OVERLAY_SCRIPT_ID]: false,
+};
 
 /**
  * Bindings that a native command already covers are shadowed so one key press never
@@ -59,14 +66,17 @@ export function createShortcutService(api, { settingsStore, listActionsFor }) {
   async function setScript(id, wanted, current) {
     if (wanted && !current.has(id)) {
       await api.scripting.registerContentScripts([{
-        id, matches: PAGE_ORIGINS, js: [SCRIPTS[id]], allFrames: ALL_FRAMES[id], runAt: 'document_start', persistAcrossSessions: true,
+        id, matches: PAGE_ORIGINS, js: [SCRIPTS[id]], allFrames: ALL_FRAMES[id], matchOriginAsFallback: ORIGIN_FALLBACK[id],
+        runAt: 'document_start', persistAcrossSessions: true,
       }]);
       return true;
     }
     // Registrations persist across updates, so one made by an older version keeps its old frame
     // scope until corrected here. Pages already open keep what they loaded until they reload.
-    if (wanted && Boolean(current.get(id).allFrames) !== ALL_FRAMES[id]) {
-      await api.scripting.updateContentScripts([{ id, allFrames: ALL_FRAMES[id] }]);
+    const existing = current.get(id);
+    if (wanted && (Boolean(existing.allFrames) !== ALL_FRAMES[id]
+      || Boolean(existing.matchOriginAsFallback) !== ORIGIN_FALLBACK[id])) {
+      await api.scripting.updateContentScripts([{ id, allFrames: ALL_FRAMES[id], matchOriginAsFallback: ORIGIN_FALLBACK[id] }]);
     }
     if (!wanted && current.has(id)) await api.scripting.unregisterContentScripts({ ids: [id] });
     return false;
