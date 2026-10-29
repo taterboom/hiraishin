@@ -22,7 +22,7 @@ export default {
   'popup.license.button': '購入 / 有効化',
   'popup.overlaySetup.label': 'ページ内ホイールを有効にする',
   'popup.overlaySetup.title': 'ページ内でもホイールを使えます',
-  'popup.overlaySetup.body': '{key} を押したままマウスをはじき、離すと実行します。初回はサイトへのアクセス許可が必要です。',
+  'popup.overlaySetup.body': '{key} を押したままマウスをはじき、離すと実行します。サイトへのアクセス許可が必要です（拡張機能の詳細で変更できます）。',
   'popup.overlaySetup.button': '設定して有効にする',
   'popup.tasks.summary': '保留中の選択テキスト（{count}）',
   'popup.tasks.retry': 'もう一度入力',

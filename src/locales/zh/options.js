@@ -34,7 +34,7 @@ export default {
 
   'options.actions.heading': '动作',
   'options.actions.openChromeShortcuts': '打开 Chrome 快捷键管理 ↗',
-  'options.actions.lead': '工具栏与网页轮盘共用下方分区配置。浏览器快捷键由 Chrome 管理；网页快捷键在已授权的网页内生效。',
+  'options.actions.lead': '工具栏与网页轮盘共用下方分区配置。浏览器快捷键由 Chrome 管理；网页快捷键在普通网页内生效。',
   'options.overlay.toggle': '在网页中使用轮盘',
   'options.overlay.toggleHint': '开启后，按住按键并甩动鼠标即可使用。',
   'options.overlay.permissionNote': '轮盘已开启。允许网页访问后，即可按住 {key} 并甩动鼠标使用。',
@@ -121,7 +121,6 @@ export default {
   'options.targets.lead': '填入和发送需要访问目标网站的权限。目标选择规则：当前窗口最左侧匹配的标签页，没有则在来源标签右侧新建。',
   'options.targets.default': '默认目标',
   'options.targets.capabilityAria': '{name} 的能力',
-  'options.targets.granted': '网站权限已允许',
   'options.targets.notGranted': '未允许访问网站',
   'options.targets.allowed': '已允许访问 {name}。',
   'options.targets.allow': '允许访问',

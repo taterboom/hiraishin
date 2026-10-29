@@ -498,7 +498,8 @@ function TargetsDialog({ view, saveSettings, show, onSync, onClose }: {
                   {CAPABILITIES.map(value => <option key={value} value={value}>{capabilityLabel(value)}</option>)}
                 </select>
               ) : <span className="pill muted">{capabilityLabel(target.capability)}</span>}
-              <span className={`pill ${target.granted ? 'ok' : 'warn'}`}>{target.granted ? t('options.targets.granted') : t('options.targets.notGranted')}</span>
+              {/* Site access comes with the install; only a narrowed one is worth a word. */}
+              {!target.granted && <span className="pill warn">{t('options.targets.notGranted')}</span>}
               {!target.granted && target.capability !== 'navigate' && (
                 <button type="button" className="button small" onClick={async () => {
                   const granted = await chrome.permissions.request({ origins: target.origins });

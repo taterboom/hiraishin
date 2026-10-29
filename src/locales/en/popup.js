@@ -23,7 +23,7 @@ export default {
   'popup.license.button': 'Buy / activate',
   'popup.overlaySetup.label': 'Enable the in-page wheel',
   'popup.overlaySetup.title': 'Use the wheel on web pages too',
-  'popup.overlaySetup.body': 'Hold {key} and flick the mouse, then release to run. Allow site access the first time.',
+  'popup.overlaySetup.body': 'Hold {key} and flick the mouse, then release to run. Needs site access (changeable in the extension details).',
   'popup.overlaySetup.button': 'Set up and enable',
   'popup.tasks.summary': 'Pending selections ({count})',
   'popup.tasks.retry': 'Retry fill',

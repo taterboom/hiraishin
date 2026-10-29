@@ -22,7 +22,7 @@ export default {
   'popup.license.button': '购买 / 激活',
   'popup.overlaySetup.label': '启用网页轮盘',
   'popup.overlaySetup.title': '在网页里也能用轮盘',
-  'popup.overlaySetup.body': '按住 {key} 并甩动鼠标，松开执行。首次使用需允许网页访问。',
+  'popup.overlaySetup.body': '按住 {key} 并甩动鼠标，松开执行。需要允许网页访问（可在扩展详情里改回）。',
   'popup.overlaySetup.button': '设置并启用',
   'popup.tasks.summary': '待处理选区（{count}）',
   'popup.tasks.retry': '重试填入',

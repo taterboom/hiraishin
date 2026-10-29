@@ -57,8 +57,8 @@
 • 可选发送后回到来源页面；支持自定义目标，自定义网站需要兼容的页面结构和正确的配置。
 
 权限与边界
-• 网页轮盘和网页快捷键需要你主动允许网页访问；Chrome 内部页面等受限页面不适用。大部分是嵌入框架的页面（如 artifact）也能召出轮盘。
-• AI 填入与发送需要目标网站权限和已登录账号，页面结构变化可能影响适配。
+• 网页轮盘和网页快捷键需要网页访问权限，安装时一并授予，可在 Chrome 的扩展详情里收窄；Chrome 内部页面等受限页面不适用。大部分是嵌入框架的页面（如 artifact）也能召出轮盘。
+• AI 填入与发送需要已登录账号，页面结构变化可能影响适配。
 • 22 个浏览器命令可在 Chrome 快捷键管理中绑定；网页快捷键可使用 Ctrl+- 等组合。原生快捷键触发的关闭操作立即执行，轮盘入口会再次确认。
 • 界面支持简体中文、日语和英语。
 • 所有功能免费试用 14 天，从第一次成功执行动作开始计时；之后一次性购买，不是订阅。
@@ -109,8 +109,8 @@ Option（Windows / Linux では Alt）を押しながらマウスを振ってア
 • 送信後に元のページへ戻ることもできます。カスタム送信先にも対応していますが、カスタムサイトには互換性のあるページ構造と正しい設定が必要です。
 
 権限と制限
-• ページ内ホイールとページ内ショートカットを使うには、サイトへのアクセスを許可する必要があります。Chrome の内部ページなど、制限されたページでは使えません。artifact のように大半が埋め込みフレームのページでもホイールを呼び出せます。
-• AI への入力と送信には、送信先サイトへのアクセス許可とログイン済みのアカウントが必要です。サイトのページ構造が変わると、うまく動かなくなることがあります。
+• ページ内ホイールとページ内ショートカットにはサイトへのアクセスが必要で、インストール時に許可されます（Chrome の拡張機能の詳細で絞り込めます）。Chrome の内部ページなど、制限されたページでは使えません。artifact のように大半が埋め込みフレームのページでもホイールを呼び出せます。
+• AI への入力と送信には、ログイン済みのアカウントが必要です。サイトのページ構造が変わると、うまく動かなくなることがあります。
 • 20 個のブラウザコマンドは Chrome のショートカット設定で割り当てられます。ページ内ショートカットでは Ctrl+- などの組み合わせも使えます。ネイティブショートカットで実行したタブを閉じる操作はすぐに実行され、ホイールからの場合は確認があります。
 • 画面は日本語・英語・簡体字中国語に対応しています。
 • すべての機能を 14 日間無料でお試しいただけます（初めて操作が成功したときから開始）。その後は一度の購入で使い続けられます。サブスクリプションではありません。
@@ -161,8 +161,8 @@ Send selections to AI
 • Optionally return to the source page after sending. Custom targets are supported; custom websites need a compatible page structure and correct configuration.
 
 Permissions and limits
-• The in-page wheel and in-page shortcuts require you to allow site access; they don't work on restricted pages such as Chrome's internal pages. The wheel also opens on pages that are mostly an embedded frame, such as artifacts.
-• Filling and sending to AI require access to the target website and a signed-in account; changes to the website's page structure may affect compatibility.
+• The in-page wheel and in-page shortcuts need site access, granted at install (you can narrow it in the extension's details in Chrome); they don't work on restricted pages such as Chrome's internal pages. The wheel also opens on pages that are mostly an embedded frame, such as artifacts.
+• Filling and sending to AI require a signed-in account; changes to the website's page structure may affect compatibility.
 • 20 browser commands can be bound in Chrome's keyboard shortcut settings; in-page shortcuts can use combinations such as Ctrl+-. Close actions triggered by native shortcuts run immediately, while the wheel asks you to confirm.
 • Interface in English, Simplified Chinese and Japanese.
 • Every feature is free to try for 14 days, starting the first time an action runs successfully; after that, a one-time purchase. No subscription.
@@ -203,7 +203,7 @@ English (for the dashboard): Quickly run tab and selection actions in the curren
 | notifications | 操作失败、无可用对象或无法确认结果时提示；不发送营销通知 |
 | alarms | 清理过期的待处理选区 |
 | offscreen, clipboardWrite | 用户触发时通过离屏页面复制标签链接；不读取剪贴板 |
-| 可选 http://*/* 与 https://*/* | 用户授权后的网页轮盘 / 快捷键；对 AI 目标也可单独按域名授权 |
+| http://*/* 与 https://*/*（安装时声明） | 网页轮盘是主入口，需在用户所在的任意网页响应按住甩动；网页快捷键与 AI 目标页的填入 / 发送也依赖它。只在用户触发时读取选区，不常驻读取页面内容 |
 
 没有远程执行代码、eval 或下载后执行的脚本。业务脚本与 React 均打包在扩展中；访问 AI 页面是用户触发的网页操作，不是加载扩展代码。
 

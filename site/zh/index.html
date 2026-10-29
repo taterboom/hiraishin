@@ -62,7 +62,7 @@
         { "@type": "Question", "name": "Hiraishin 的标签历史和浏览器的后退有什么区别？", "acceptedAnswer": { "@type": "Answer", "text": "浏览器后退在同一个标签页里回到上一个网址；Hiraishin 记录的是你在标签页之间的切换轨迹，每个窗口独立，后退会切回上一个激活过的标签页，就像 VS Code 的位置历史。" } },
         { "@type": "Question", "name": "怎样用快捷键关闭当前标签右侧的所有标签？", "acceptedAnswer": { "@type": "Answer", "text": "安装 Hiraishin 后，在 chrome://extensions/shortcuts 给“关闭右侧标签页”命令绑定任意组合键。固定标签和其他窗口不受影响。" } },
         { "@type": "Question", "name": "如何把网页上选中的文字直接发送给 ChatGPT 或 Claude？", "acceptedAnswer": { "@type": "Answer", "text": "选中文字后通过轮盘、快捷键或右键菜单发送。Hiraishin 会切换到当前窗口最左侧的 ChatGPT / Claude 对话页（没有则新建），填入文字并发送；如果输入框已有草稿，它会停下并提示，不会覆盖。" } },
-        { "@type": "Question", "name": "Chrome 扩展快捷键不支持减号，Hiraishin 怎么支持 Ctrl+-？", "acceptedAnswer": { "@type": "Answer", "text": "Hiraishin 在你授权的网页里监听按键，作为“网页快捷键”补充 Chrome 原生快捷键。地址栏和 Chrome 内部页面仍需使用原生快捷键或面板。" } },
+        { "@type": "Question", "name": "Chrome 扩展快捷键不支持减号，Hiraishin 怎么支持 Ctrl+-？", "acceptedAnswer": { "@type": "Answer", "text": "Hiraishin 在网页里监听按键，作为“网页快捷键”补充 Chrome 原生快捷键。地址栏和 Chrome 内部页面仍需使用原生快捷键或面板。" } },
         { "@type": "Question", "name": "Hiraishin 会上传我的浏览数据吗？", "acceptedAnswer": { "@type": "Answer", "text": "不会。设置和访问轨迹只保存在本机；只有在你主动填入或发送时，选中的文字才会交给你选择的 AI 网站。" } }
       ]
     },
@@ -114,7 +114,7 @@
   <p><em>Hiraishin: tab history back/forward, tab tidying, and send-selection-to-ChatGPT/Claude for Chrome. 14-day free trial, then a one-time purchase; runs locally.</em></p>
 
   <h2>先用上轮盘</h2>
-  <section class="feature"><h3>按住、甩动、松开</h3><p>在设置中允许网页访问后，macOS 按住 Option，Windows / Linux 按住 Alt，再甩动鼠标选择动作，松开执行。只按住不动不会弹出，圆心松手不执行；Esc 或右键取消。</p></section>
+  <section class="feature"><h3>按住、甩动、松开</h3><p>macOS 按住 Option，Windows / Linux 按住 Alt，再甩动鼠标选择动作，松开执行。只按住不动不会弹出，圆心松手不执行；Esc 或右键取消。</p></section>
   <section class="feature"><h3>你的方向，你的动作</h3><p>4 / 6 / 8 / 12 等分自由配置，每一瓣可以放入动作或留空。点击工具栏图标也能打开同一套轮盘，用鼠标点击执行。轮盘上的批量关闭会先确认数量，再执行。</p></section>
   <h2>它解决什么问题</h2>
   <section class="feature">
@@ -150,13 +150,13 @@
   <details><summary>Hiraishin 的标签历史和浏览器的后退有什么区别？</summary><p>浏览器后退在同一个标签页里回到上一个网址；Hiraishin 记录的是你在标签页之间的切换轨迹，每个窗口独立，后退会切回上一个激活过的标签页。</p></details>
   <details><summary>怎样用快捷键关闭当前标签右侧的所有标签？</summary><p>在 chrome://extensions/shortcuts 给“关闭右侧标签页”绑定任意组合键。固定标签和其他窗口不受影响。</p></details>
   <details><summary>如何把网页上选中的文字直接发送给 ChatGPT 或 Claude？</summary><p>选中文字后通过轮盘、快捷键或右键菜单发送。目标是当前窗口最左侧的对话页，没有则新建。输入框已有草稿时会停下并提示。</p></details>
-  <details><summary>Chrome 扩展快捷键不支持减号，怎么支持 Ctrl+-？</summary><p>Hiraishin 在你授权的网页里监听按键作为“网页快捷键”；地址栏和 Chrome 内部页面仍用原生快捷键或面板。</p></details>
+  <details><summary>Chrome 扩展快捷键不支持减号，怎么支持 Ctrl+-？</summary><p>Hiraishin 在网页里监听按键作为“网页快捷键”；地址栏和 Chrome 内部页面仍用原生快捷键或面板。</p></details>
   <details><summary>会上传我的浏览数据吗？</summary><p>不会。设置和轨迹只在本机；只有你主动填入或发送时，选中的文字才会交给你选择的 AI 网站。</p></details>
   <details><summary>收费吗？</summary><p>所有功能可免费试用 14 天，从第一次成功执行动作开始计时。试用结束后一次性购买即可继续使用，不是订阅。试用结束时，设置和待处理内容都会保留。</p></details>
 
   <h2 id="install">安装与开始使用</h2>
   <p>当前为发布候选版本，Chrome 网上应用店链接将在上架后提供。已取得开发者提供的安装包时：解压 ZIP → 打开 chrome://extensions → 开启开发者模式 → 加载已解压的文件夹。</p>
-  <p>固定工具栏图标，先试着点击轮盘。进入设置允许网页访问后，即可使用网页手势。网页轮盘不适用于 Chrome 内部页、网上应用店等受限页面；发送到 AI 需要相应网站权限与已登录账号，网站界面变化可能影响适配。</p>
+  <p>固定工具栏图标，先试着点击轮盘。安装后即可在网页上使用手势。网页轮盘不适用于 Chrome 内部页、网上应用店等受限页面；发送到 AI 需要已登录账号，网站界面变化可能影响适配。</p>
   <footer>
     <p>Hiraishin（飛雷神）由 <a href="https://github.com/taterboom">taterboom</a> 开发。<a href="https://koe.44san.com/hiraishin?lang=zh">想要什么功能</a>。<a href="privacy">隐私与数据说明</a>。需要 Chrome 121 或更新版本。</p>
   </footer>

@@ -34,7 +34,7 @@ export default {
 
   'options.actions.heading': 'Actions',
   'options.actions.openChromeShortcuts': 'Open Chrome shortcut settings ↗',
-  'options.actions.lead': 'The toolbar wheel and the in-page wheel share the sectors below. Chrome manages browser shortcuts; in-page shortcuts work on pages you have allowed.',
+  'options.actions.lead': 'The toolbar wheel and the in-page wheel share the sectors below. Chrome manages browser shortcuts; in-page shortcuts work on ordinary web pages.',
   'options.overlay.toggle': 'Use the wheel on web pages',
   'options.overlay.toggleHint': 'When on, hold the key and flick the mouse to use it.',
   'options.overlay.permissionNote': 'The wheel is on. Allow page access, then hold {key} and flick the mouse to use it.',
@@ -121,7 +121,6 @@ export default {
   'options.targets.lead': 'Filling and sending need access to the target site. The target is the leftmost matching tab in the current window; if there is none, a new tab opens to the right of the source tab.',
   'options.targets.default': 'Default target',
   'options.targets.capabilityAria': 'Capability of {name}',
-  'options.targets.granted': 'Site access allowed',
   'options.targets.notGranted': 'Site access not allowed',
   'options.targets.allowed': 'Access to {name} allowed.',
   'options.targets.allow': 'Allow access',

@@ -34,7 +34,7 @@ export default {
 
   'options.actions.heading': '操作',
   'options.actions.openChromeShortcuts': 'Chrome のショートカット設定を開く ↗',
-  'options.actions.lead': 'ツールバーのホイールとページ内ホイールは、下のセクター設定を共有します。ブラウザのショートカットは Chrome が管理し、ページ内ショートカットはアクセスを許可したページで有効です。',
+  'options.actions.lead': 'ツールバーのホイールとページ内ホイールは、下のセクター設定を共有します。ブラウザのショートカットは Chrome が管理し、ページ内ショートカットは通常のウェブページで有効です。',
   'options.overlay.toggle': 'ページ内でホイールを使う',
   'options.overlay.toggleHint': 'オンにすると、キーを押したままマウスを振って使えます。',
   'options.overlay.permissionNote': 'ホイールはオンです。ページへのアクセスを許可すると、{key} を押したままマウスを振って使えます。',
@@ -121,7 +121,6 @@ export default {
   'options.targets.lead': '入力と送信には送信先サイトへのアクセス許可が必要です。送信先は、現在のウインドウで一致する最も左のタブです。なければ元のタブの右に新しく開きます。',
   'options.targets.default': 'デフォルトの送信先',
   'options.targets.capabilityAria': '{name} の機能',
-  'options.targets.granted': 'サイトへのアクセス許可済み',
   'options.targets.notGranted': 'サイトへのアクセス未許可',
   'options.targets.allowed': '{name} へのアクセスを許可しました。',
   'options.targets.allow': 'アクセスを許可',
