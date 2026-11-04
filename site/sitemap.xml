@@ -54,6 +54,33 @@
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
+  <url>
+    <loc>https://hiraishin.44san.com/terms</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://hiraishin.44san.com/terms"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://hiraishin.44san.com/zh/terms"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://hiraishin.44san.com/ja/terms"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://hiraishin.44san.com/terms"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://hiraishin.44san.com/zh/terms</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://hiraishin.44san.com/terms"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://hiraishin.44san.com/zh/terms"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://hiraishin.44san.com/ja/terms"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://hiraishin.44san.com/terms"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>https://hiraishin.44san.com/ja/terms</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://hiraishin.44san.com/terms"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://hiraishin.44san.com/zh/terms"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://hiraishin.44san.com/ja/terms"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://hiraishin.44san.com/terms"/>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
   <url><loc>https://hiraishin.44san.com/llms.txt</loc><changefreq>monthly</changefreq></url>
   <url><loc>https://hiraishin.44san.com/actions.json</loc><changefreq>monthly</changefreq></url>
 </urlset>

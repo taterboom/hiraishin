@@ -21,11 +21,12 @@
 ## Languages
 
 - The extension interface and this website are available in English, Simplified Chinese and Japanese. The extension follows the browser language by default (other languages fall back to English) and can be switched in Settings.
-- English: [Home](https://hiraishin.44san.com/) · [Privacy](https://hiraishin.44san.com/privacy)
-- 简体中文: [首页](https://hiraishin.44san.com/zh/) · [隐私与数据说明](https://hiraishin.44san.com/zh/privacy)
-- 日本語: [ホーム](https://hiraishin.44san.com/ja/) · [プライバシー](https://hiraishin.44san.com/ja/privacy)
+- English: [Home](https://hiraishin.44san.com/) · [Privacy](https://hiraishin.44san.com/privacy) · [Purchase and refunds](https://hiraishin.44san.com/terms)
+- 简体中文: [首页](https://hiraishin.44san.com/zh/) · [隐私与数据说明](https://hiraishin.44san.com/zh/privacy) · [购买与退款](https://hiraishin.44san.com/zh/terms)
+- 日本語: [ホーム](https://hiraishin.44san.com/ja/) · [プライバシー](https://hiraishin.44san.com/ja/privacy) · [購入・返金](https://hiraishin.44san.com/ja/terms)
 
 ## Reference
 
 - [actions.json](https://hiraishin.44san.com/actions.json): machine-readable action list (English names)
 - [Privacy details](https://hiraishin.44san.com/privacy)
+- [Purchase, license and refunds](https://hiraishin.44san.com/terms): prices (tax included), 14-day full refund after payment, seller disclosures
