@@ -1,7 +1,7 @@
 {
   "name": "Hiraishin",
-  "version": "0.3.0",
-  "description": "Hold Option / Alt and flick for a radial menu: switch, tidy and copy tabs, and send selected text to ChatGPT / Claude.",
+  "version": "1.0.0",
+  "description": "Hold Option / Alt and flick a wheel to switch, arrange and duplicate tabs, copy links, and send selected text to ChatGPT or Claude.",
   "homepage": "https://hiraishin.44san.com/",
   "minimumChrome": "121",
   "actions": [
@@ -204,7 +204,7 @@
     },
     {
       "id": "move-with-left-to-new-window",
-      "name": "Move tab and left ones to new window",
+      "name": "Move tab and those to its left to new window",
       "category": "Arrange",
       "keywords": [
         "window",
@@ -221,7 +221,7 @@
     },
     {
       "id": "move-with-right-to-new-window",
-      "name": "Move tab and right ones to new window",
+      "name": "Move tab and those to its right to new window",
       "category": "Arrange",
       "keywords": [
         "window",
@@ -255,7 +255,7 @@
     {
       "id": "copy-links",
       "name": "Copy links",
-      "category": "Take away",
+      "category": "Copy links",
       "keywords": [
         "copy",
         "url",
@@ -274,7 +274,7 @@
     {
       "id": "copy-links-markdown",
       "name": "Copy as Markdown links",
-      "category": "Take away",
+      "category": "Copy links",
       "keywords": [
         "copy",
         "markdown",

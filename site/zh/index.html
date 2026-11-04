@@ -47,6 +47,7 @@
       "featureList": [
         "按窗口独立记录的标签页访问历史，可后退、前进",
         "切回上一 Tab",
+        "切到左侧 / 右侧 Tab，到头绕回另一端",
         "关闭右侧标签页、复制标签页、左移 / 右移 / 移到最左 / 最右、移到新窗口",
         "以纯文本或 Markdown 复制标签页链接",
         "前往 ChatGPT / Claude，或把选中文字发送过去（当前窗口最左侧的匹配标签页）",
@@ -62,7 +63,7 @@
         { "@type": "Question", "name": "Hiraishin 的标签历史和浏览器的后退有什么区别？", "acceptedAnswer": { "@type": "Answer", "text": "浏览器后退在同一个标签页里回到上一个网址；Hiraishin 记录的是你在标签页之间的切换轨迹，每个窗口独立，后退会切回上一个激活过的标签页，就像 VS Code 的位置历史。" } },
         { "@type": "Question", "name": "怎样用快捷键关闭当前标签右侧的所有标签？", "acceptedAnswer": { "@type": "Answer", "text": "安装 Hiraishin 后，在 chrome://extensions/shortcuts 给“关闭右侧标签页”命令绑定任意组合键。固定标签和其他窗口不受影响。" } },
         { "@type": "Question", "name": "如何把网页上选中的文字直接发送给 ChatGPT 或 Claude？", "acceptedAnswer": { "@type": "Answer", "text": "选中文字后通过轮盘、快捷键或右键菜单发送。Hiraishin 会切换到当前窗口最左侧的 ChatGPT / Claude 对话页（没有则新建），填入文字并发送；如果输入框已有草稿，它会停下并提示，不会覆盖。" } },
-        { "@type": "Question", "name": "Chrome 扩展快捷键不支持减号，Hiraishin 怎么支持 Ctrl+-？", "acceptedAnswer": { "@type": "Answer", "text": "Hiraishin 在网页里监听按键，作为“网页快捷键”补充 Chrome 原生快捷键。地址栏和 Chrome 内部页面仍需使用原生快捷键或面板。" } },
+        { "@type": "Question", "name": "Chrome 扩展快捷键不支持减号，Hiraishin 怎么支持 Ctrl+-？", "acceptedAnswer": { "@type": "Answer", "text": "Hiraishin 在网页里监听按键，作为“网页快捷键”补充 Chrome 浏览器快捷键。地址栏和 Chrome 内部页面仍需使用浏览器快捷键或工具栏轮盘。" } },
         { "@type": "Question", "name": "Hiraishin 会上传我的浏览数据吗？", "acceptedAnswer": { "@type": "Answer", "text": "不会。设置和访问轨迹只保存在本机；只有在你主动填入或发送时，选中的文字才会交给你选择的 AI 网站。" } }
       ]
     },
@@ -119,7 +120,7 @@
   <h2>它解决什么问题</h2>
   <section class="feature">
     <h3>“刚才那个页面在哪？” → 标签访问历史后退 / 前进</h3>
-    <p>每个窗口独立记录你实际切换过的标签页，像 VS Code 的位置历史一样后退、前进。默认 <kbd>Ctrl+,</kbd> / <kbd>Ctrl+.</kbd>，也可用 <kbd>Ctrl+-</kbd> / <kbd>Ctrl+Shift+-</kbd> 作为网页快捷键。后退后手动打开新标签会截断前进分支；到达边界时停留。</p>
+    <p>每个窗口独立记录你实际切换过的标签页，像 VS Code 的位置历史一样后退、前进。默认 <kbd>Ctrl+,</kbd> / <kbd>Ctrl+.</kbd>，也可以自行设置 <kbd>Ctrl+-</kbd> / <kbd>Ctrl+Shift+-</kbd> 等网页快捷键。后退后手动切换到其他标签页会截断前进分支；到达边界时停留。</p>
   </section>
   <section class="feature">
     <h3>“这部分工作结束了” → 关闭右侧标签、移到新窗口</h3>
@@ -131,14 +132,14 @@
   </section>
   <section class="feature">
     <h3>“查到一段内容，想立刻交给 AI” → 填入或发送到 ChatGPT / Claude</h3>
-    <p>选中文字，通过轮盘、快捷键或右键，Hiraishin 切换到当前窗口最左侧的对话页（没有则在旁边新建），填入并发送。已有草稿时不会覆盖；未登录、正在生成、无法确认提交时都会明确告诉你。可选“发送后返回来源页”。可配置兼容网站作为自定义目标，需要正确的地址规则和页面选择器。</p>
+    <p>选中文字，通过轮盘、快捷键或右键，Hiraishin 切换到当前窗口最左侧的对话页（没有则在旁边新建），填入并发送。已有草稿时不会覆盖；未登录或无法确认提交时会明确告诉你。可选“发送后返回来源页”。可配置兼容网站作为自定义目标，需要正确的地址规则和页面选择器。</p>
   </section>
 
   <h2>动作一览</h2>
   <table>
     <thead><tr><th>分类</th><th>动作</th></tr></thead>
     <tbody>
-      <tr><td>穿梭</td><td>访问历史后退 / 前进 · 切回上一 Tab</td></tr>
+      <tr><td>穿梭</td><td>访问历史后退 / 前进 · 切回上一 Tab · 切到左侧 / 右侧 Tab（到头绕回）</td></tr>
       <tr><td>整理</td><td>关闭右侧标签页 · 左移 / 右移 / 最左 / 最右 · 当前 / 含左侧 / 含右侧移到新窗口</td></tr>
       <tr><td>复制与带走</td><td>复制标签页 · 复制链接 · 复制为 Markdown</td></tr>
       <tr><td>AI 目标</td><td>前往 / 发送到 ChatGPT、Claude、默认目标；自定义目标按能力支持前往、填入或发送</td></tr>
@@ -150,7 +151,7 @@
   <details><summary>Hiraishin 的标签历史和浏览器的后退有什么区别？</summary><p>浏览器后退在同一个标签页里回到上一个网址；Hiraishin 记录的是你在标签页之间的切换轨迹，每个窗口独立，后退会切回上一个激活过的标签页。</p></details>
   <details><summary>怎样用快捷键关闭当前标签右侧的所有标签？</summary><p>在 chrome://extensions/shortcuts 给“关闭右侧标签页”绑定任意组合键。固定标签和其他窗口不受影响。</p></details>
   <details><summary>如何把网页上选中的文字直接发送给 ChatGPT 或 Claude？</summary><p>选中文字后通过轮盘、快捷键或右键菜单发送。目标是当前窗口最左侧的对话页，没有则新建。输入框已有草稿时会停下并提示。</p></details>
-  <details><summary>Chrome 扩展快捷键不支持减号，怎么支持 Ctrl+-？</summary><p>Hiraishin 在网页里监听按键作为“网页快捷键”；地址栏和 Chrome 内部页面仍用原生快捷键或面板。</p></details>
+  <details><summary>Chrome 扩展快捷键不支持减号，怎么支持 Ctrl+-？</summary><p>Hiraishin 在网页里监听按键作为“网页快捷键”；地址栏和 Chrome 内部页面仍可用浏览器快捷键或工具栏轮盘。</p></details>
   <details><summary>会上传我的浏览数据吗？</summary><p>不会。设置和轨迹只在本机；只有你主动填入或发送时，选中的文字才会交给你选择的 AI 网站。</p></details>
   <details><summary>收费吗？</summary><p>所有功能可免费试用 14 天，从第一次成功执行动作开始计时。试用结束后一次性购买即可继续使用，不是订阅。试用结束时，设置和待处理内容都会保留。</p></details>
 

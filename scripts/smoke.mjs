@@ -49,7 +49,8 @@ async function findChrome() {
   return found[found.length - 1];
 }
 
-// Smoke build: pre-grant hosts so adapter and web-shortcut paths run without a permission prompt.
+// Smoke build: the shipped manifest as is. Site access is granted at install, so the wheel, page
+// shortcuts and adapters must work here without anything granted by hand: this is a fresh install.
 // Chrome derives the unpacked extension id from the canonical path (macOS /var → /private/var).
 import { buildAll, OUT_DIR } from './build.mjs';
 await buildAll();
@@ -62,7 +63,11 @@ await writeFile(path.join(EXT_DIR, 'src/background.js'), await readFile(path.joi
   `\nglobalThis.__hiraishinTest = message => controller.handleMessage(message, { id: chrome.runtime.id, url: chrome.runtime.getURL('popup.html') })\n` +
   `  .then(result => ({ ok: true, ...(result ?? {}) }), error => ({ ok: false, error: error.message || '操作失败，请重试。' }));\n` +
   // Counts embedded-frame relays: a pointer moving with no key held must open none.
-  `globalThis.__relayConnects = 0;\nchrome.runtime.onConnect.addListener(port => { if (port.name === 'hiraishin-relay') globalThis.__relayConnects++; });\n`);
+  `globalThis.__relayConnects = 0;\nglobalThis.__relayEvents = [];\nchrome.runtime.onConnect.addListener(port => {\n`
+  + `  if (port.name !== 'hiraishin-relay') return;\n  globalThis.__relayConnects++;\n`
+  + `  const source = { tabId: port.sender?.tab?.id, frameId: port.sender?.frameId, documentId: port.sender?.documentId };\n`
+  + `  const record = kind => globalThis.__relayEvents.push({ at: Date.now(), kind, ...source });\n`
+  + `  record('connect');\n  port.onMessage.addListener(message => record(message.kind));\n  port.onDisconnect.addListener(() => record('disconnect'));\n});\n`);
 // The assertions read the Chinese copy, and Chrome for Testing's UI language depends on the
 // machine. Make Chinese the default preference in this copy only; a test that saves an explicit
 // locale still switches, and one that saves settings without a locale gets Chinese back.
@@ -70,9 +75,6 @@ const settingsFile = path.join(EXT_DIR, 'src/settings.js');
 const settingsSource = await readFile(settingsFile, 'utf8');
 if (!settingsSource.includes("locale: 'auto',")) throw new Error('smoke: default locale marker not found in settings.js');
 await writeFile(settingsFile, settingsSource.replace("locale: 'auto',", "locale: 'zh',"));
-const manifest = JSON.parse(await readFile(path.join(EXT_DIR, 'manifest.json'), 'utf8'));
-manifest.host_permissions = ['http://127.0.0.1/*', 'http://*/*', 'https://*/*'];
-await writeFile(path.join(EXT_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2));
 const PROFILE = await realpath(await mkdtemp(path.join(os.tmpdir(), 'hiraishin-profile-')));
 
 const server = http.createServer(async (req, res) => {
@@ -159,7 +161,19 @@ async function waitTarget(predicate, timeout = 15000) {
   while (Date.now() - start < timeout) { const t = (await targets()).find(predicate); if (t) return t; await sleep(250); }
   throw new Error('target not found');
 }
-async function attach(target) { const s = new Session(target.webSocketDebuggerUrl, target.title || target.url); await s.ready; await s.send('Runtime.enable'); return s; }
+async function attach(target) {
+  const s = new Session(target.webSocketDebuggerUrl, target.title || target.url);
+  await s.ready;
+  await s.send('Runtime.enable');
+  if (target.type === 'page') {
+    // Keep debugger input unbuffered: background/headless pages otherwise spend five seconds
+    // hit-testing each trusted mouse event. This enables the protocol domain, not a visual overlay.
+    // https://github.com/puppeteer/puppeteer/issues/4868
+    await s.send('DOM.enable');
+    await s.send('Overlay.enable');
+  }
+  return s;
+}
 
 /** Fail fast instead of hanging when a page stops answering (an action may have moved the tab). */
 function withTimeout(promise, ms, what) {
@@ -716,6 +730,7 @@ try {
     const view = await overlayPage.eval(`({ width: innerWidth, height: innerHeight })`);
     const start = { x: Math.round(view.width / 2), y: Math.round(view.height / 2) + 20 };
     const connectsBefore = await sw.eval('globalThis.__relayConnects');
+    const relayMark = await sw.eval('globalThis.__relayEvents.length');
     await holdKey('keyUp');
     for (let i = 0; i < 20; i++) await movePointer(start.x - 100 + i * 10, start.y);
     const idleConnects = (await sw.eval('globalThis.__relayConnects')) - connectsBefore;
@@ -736,6 +751,9 @@ try {
       await sleep(200);
       box = await withTimeout(wheelBox(overlayPage), 5000, `measure the ${label} wheel`).catch(() => ({ missing: true }));
     }
+    const gestureRelays = await sw.eval(`globalThis.__relayEvents.slice(${relayMark}).filter(event => event.tabId === ${overlayTab} && event.frameId > 0)`);
+    const relayedGesture = gestureRelays.some(event => event.kind === 'flick' && gestureRelays.some(connect =>
+      connect.kind === 'connect' && connect.frameId === event.frameId && connect.documentId === event.documentId));
     // With focus inside, the frame saw the key go down and the flick starts where the pointer
     // rested; with focus on the page, the frame learns of the key from the first move, which is
     // also where the top frame's own wheel would begin.
@@ -754,9 +772,9 @@ try {
       tabsAfterRun = await sw.eval(`chrome.tabs.query({ windowId: ${windowId} }).then(t => t.length)`);
       ran = tabsAfterRun === tabsBeforeRun + 1;
     }
-    (idleConnects === 0 && offset !== null && offset <= 10 && ran)
+    (idleConnects === 0 && relayedGesture && offset !== null && offset <= 10 && ran)
       ? pass(`a wheel gesture over a ${label} opens where it began and runs on release`)
-      : fail(`wheel over a ${label}`, JSON.stringify({ idleConnects, box, began, offset, tabsBeforeRun, tabsAfterRun }));
+      : fail(`wheel over a ${label}`, JSON.stringify({ idleConnects, relayedGesture, gestureRelays, box, began, offset, tabsBeforeRun, tabsAfterRun }));
     await sw.eval(`(async () => { const tabs = await chrome.tabs.query({ windowId: ${windowId} });
       for (const extra of tabs.filter(t => t.id !== ${overlayTab} && t.url.includes('title=Frames'))) await chrome.tabs.remove(extra.id);
       await chrome.tabs.update(${overlayTab}, { active: true }); })()`);
@@ -790,26 +808,67 @@ try {
   // A frame that disappears mid-gesture must not leave the page covered.
   {
     await overlayPage.send('Page.navigate', { url: `${WWW}/frames.html?title=Frames&src=${encodeURIComponent('http://frames.test:8766/fixture.html?title=InnerGone')}` });
-    await sleep(1500);
-    const view = await overlayPage.eval(`({ width: innerWidth, height: innerHeight })`);
-    const start = { x: Math.round(view.width / 2), y: Math.round(view.height / 2) + 20 };
+    const waitForRemovalSetup = async (label, read, ready) => {
+      let observed;
+      const deadline = Date.now() + 8000;
+      do {
+        observed = await read();
+        if (ready(observed)) return observed;
+        await sleep(100);
+      } while (Date.now() < deadline);
+      throw new Error(`frame removal setup: ${label} — ${JSON.stringify(observed)}`);
+    };
+    // Read the real child in the extension's isolated world. Record trusted input without
+    // synthesizing events or opening a relay ourselves: a top-frame wheel cannot pass setup.
+    const childState = () => sw.eval(`chrome.scripting.executeScript({ target: { tabId: ${overlayTab}, allFrames: true }, func: async () => {
+      if (!location.href.includes('title=InnerGone')) return null;
+      if (!globalThis.__removalInput) {
+        globalThis.__removalInput = {};
+        for (const type of ['mousemove', 'keydown']) document.addEventListener(type, event => {
+          globalThis.__removalInput[type] = { at: Date.now(), trusted: event.isTrusted, x: event.clientX, y: event.clientY, key: event.key, code: event.code, alt: event.altKey };
+        }, true);
+      }
+      const config = (await chrome.storage.local.get('pageConfig')).pageConfig;
+      return { loaded: document.readyState === 'complete', injected: Boolean(globalThis.__hiraishinShortcuts), enabled: Boolean(config?.overlay?.enabled), focused: document.hasFocus(), input: globalThis.__removalInput };
+    } }).then(frames => frames.find(frame => frame.result))`);
+    const child = await waitForRemovalSetup('loaded child and registered relay listener', childState,
+      frame => frame?.result.loaded && frame.result.injected && frame.result.enabled);
+    const bounds = await overlayPage.eval(`(() => { const r = document.getElementById('embed').getBoundingClientRect(); return { x: r.left, y: r.top, width: r.width, height: r.height }; })()`);
+    const start = { x: Math.round(bounds.x + bounds.width / 2), y: Math.round(bounds.y + bounds.height / 2) };
+    await pressEscape();
+    await holdKey('keyUp');
+    await movePointer(start.x - 20, start.y);
+    const moveInChild = x => frame => frame?.result.input.mousemove?.trusted
+      && Math.abs(frame.result.input.mousemove.x - (x - bounds.x)) <= 1
+      && Math.abs(frame.result.input.mousemove.y - (start.y - bounds.y)) <= 1;
+    await waitForRemovalSetup('pointer arrived inside child before clicking', childState, moveInChild(start.x - 20));
     await overlayPage.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: start.x, y: start.y, button: 'left', buttons: 1, clickCount: 1 });
     await overlayPage.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: start.x, y: start.y, button: 'left', buttons: 0, clickCount: 1 });
-    await holdKey('keyUp');
+    await waitForRemovalSetup('child received focus', childState, frame => frame?.result.focused);
     await movePointer(start.x, start.y);
-    await sleep(250);
+    await waitForRemovalSetup('pointer origin reached child', childState, moveInChild(start.x));
+    const relayMark = await sw.eval('globalThis.__relayEvents.length');
     await holdKey('keyDown');
-    await sleep(300);
+    await waitForRemovalSetup('trusted Alt keydown reached child', childState,
+      frame => frame?.result.input.keydown?.trusted && frame.result.input.keydown.code === hold.code && frame.result.input.keydown.alt);
     for (const dx of [10, 16, 22]) { await movePointer(start.x + dx, start.y); await sleep(250); }
-    await sleep(200);
-    const opened = await readHost();
-    await overlayPage.eval(`document.getElementById('embed').remove()`);
+    const relayEvents = () => sw.eval(`globalThis.__relayEvents.slice(${relayMark}).filter(event => event.tabId === ${overlayTab} && event.frameId === ${child.frameId} && event.documentId === ${JSON.stringify(child.documentId)})`);
+    const beforeRemoval = await waitForRemovalSetup('the child connected and relayed its flick', relayEvents,
+      events => events.some(event => event.kind === 'connect') && events.some(event => event.kind === 'flick'));
+    const opened = await waitForRemovalSetup('relayed wheel opened', readHost, host => host.shown === 'block');
+    const removalFocus = await overlayPage.eval(`(() => {
+      const frame = document.getElementById('embed');
+      const focused = { document: document.hasFocus(), frame: document.activeElement === frame, activeElement: document.activeElement?.tagName };
+      frame.remove();
+      return focused;
+    })()`);
     await sleep(800);
     const after = await readHost();
+    const afterRemoval = await relayEvents();
     await holdKey('keyUp');
     (opened.shown === 'block' && after.shown === 'none')
       ? pass('removing the frame a gesture began in closes the wheel')
-      : fail('wheel after its frame is removed', JSON.stringify({ opened, after }));
+      : fail('wheel after its frame is removed', JSON.stringify({ opened, after, removalFocus, beforeRemoval, afterRemoval }));
   }
   await overlayPage.send('Page.navigate', { url: `${WWW}/fixture.html?title=Overlay` });
   await sleep(1200);
@@ -1124,22 +1183,25 @@ try {
     const trigger = document.querySelector('.group-row .group-action');
     if (!trigger) return { missing: true };
     trigger.click();
-    await new Promise(r => setTimeout(r, 200));
+    for (let i = 0; i < 40 && !document.querySelector('dialog[open]'); i++) await new Promise(r => setTimeout(r, 50));
     const dialog = document.querySelector('dialog[open]');
     const info = { open: Boolean(dialog), cards: dialog ? dialog.querySelectorAll('.target-card').length : 0,
       toggles: dialog ? dialog.querySelectorAll('.toggle input').length : 0,
       hasDefaultSelect: dialog ? dialog.querySelectorAll('select').length > 0 : false };
     dialog?.close();
-    await new Promise(r => setTimeout(r, 150));
-    return { ...info, closed: document.querySelectorAll('dialog[open]').length === 0 };
+    // close() clears the open attribute before its close event lets React unmount the dialog.
+    // Wait for that unmount before another test tries to set targetsOpen back to true.
+    for (let i = 0; i < 40 && document.querySelector('dialog[aria-labelledby="targets-heading"]'); i++) await new Promise(r => setTimeout(r, 50));
+    return { ...info, closed: !document.querySelector('dialog[aria-labelledby="targets-heading"]') };
   })()`);
   (dialogInfo.open && dialogInfo.cards === 4 && dialogInfo.toggles === 1 && dialogInfo.hasDefaultSelect && dialogInfo.closed)
     ? pass(`the AI group row opens a dialog with ${dialogInfo.cards} targets and ${dialogInfo.toggles} behaviour toggles`)
     : fail('targets dialog', JSON.stringify(dialogInfo));
   const failedSave = await opt.eval(`(async () => {
     document.querySelector('.group-row .group-action').click();
-    await new Promise(r => setTimeout(r, 150));
+    for (let i = 0; i < 40 && !document.querySelector('dialog[open]'); i++) await new Promise(r => setTimeout(r, 50));
     const dialog = document.querySelector('dialog[open]');
+    if (!dialog) throw new Error('Targets dialog did not reopen for the failed-save check');
     [...dialog.querySelectorAll('button')].find(button => button.textContent === '编辑').click();
     await new Promise(r => setTimeout(r, 150));
     const form = dialog.querySelector('form');

@@ -299,7 +299,7 @@ test('popup close requires a single-use confirmation even with web gestures disa
   assert.deepEqual(env.data.removed, []);
   await assert.rejects(env.message('popup-close-confirm', { windowId: 2, token: confirmation.token }), /确认已失效/);
   await assert.rejects(env.message('popup-close-confirm', { windowId: 1, token: 'wrong' }), /确认已失效/);
-  await assert.rejects(env.message('popup-close-confirm', { windowId: 1, token: confirmation.token }, pageSender(1)), /只能在扩展面板/);
+  await assert.rejects(env.message('popup-close-confirm', { windowId: 1, token: confirmation.token }, pageSender(1)), /只能在工具栏轮盘/);
   assert.equal((await env.message('popup-close-confirm', { windowId: 1, token: confirmation.token })).status, 'ok');
   assert.deepEqual(env.data.removed, [3]);
   await assert.rejects(env.message('popup-close-confirm', { windowId: 1, token: confirmation.token }), /确认已失效/);
@@ -423,7 +423,7 @@ test('content scripts may only trigger the web shortcut they are bound to, from 
     tabs: [tab(1, 1, 0, true), tab(2, 1, 1), tab(3, 1, 2)] });
   await env.ready();
   for (const type of ['get-state', 'close-right', 'save-settings', 'jump', 'run-action']) {
-    await assert.rejects(env.message(type, { id: 'close-right', windowId: 1 }, pageSender(1)), /扩展面板/);
+    await assert.rejects(env.message(type, { id: 'close-right', windowId: 1 }, pageSender(1)), /工具栏轮盘/);
   }
   assert.equal((await env.message('get-settings', {}, optionsSender)).settings.version, 5, 'the options page lives in a tab but is trusted');
   assert.deepEqual(await env.message('web-shortcut', { actionId: 'close-right', combo: 'Ctrl+W' }, pageSender(1)), { status: 'ignored', message: '' }, 'combo must match the saved binding');
@@ -500,7 +500,7 @@ test('context menu and wheel selections still send while retired floating-button
   assert.equal(calls.at(-1).text, 'from menu');
   env.env.setActive(1);
   const before = calls.length;
-  await assert.rejects(env.message('floating-transfer', { mode: 'send', targetId: 'chatgpt', text: 'from button' }, pageSender(1)), /此操作只能在扩展面板中执行/);
+  await assert.rejects(env.message('floating-transfer', { mode: 'send', targetId: 'chatgpt', text: 'from button' }, pageSender(1)), /此操作只能在工具栏轮盘中执行/);
   assert.equal(calls.length, before, 'a legacy content script cannot initiate a transfer');
   env.data.selectionText = 'from wheel';
   const wheel = await env.message('overlay-action', { id: 'send-default-target' }, pageSender(1));
@@ -630,8 +630,8 @@ test('usage counts every entry, including failure and no-op, exactly once', asyn
     'copy-links': { overlay: 1, popup: 2, command: 1, web: 1 },
     'history-back': { command: 1 }, 'send-claude': { menu: 1 }, 'retry-transfer': { retry: 1 },
   });
-  await assert.rejects(env.message('get-usage', {}, pageSender(1)), /只能在扩展面板/);
-  await assert.rejects(env.message('reset-usage', {}, pageSender(1)), /只能在扩展面板/);
+  await assert.rejects(env.message('get-usage', {}, pageSender(1)), /只能在工具栏轮盘/);
+  await assert.rejects(env.message('reset-usage', {}, pageSender(1)), /只能在工具栏轮盘/);
   assert.deepEqual((await env.message('reset-usage', {}, popupSender)).usage.actions, {});
 });
 

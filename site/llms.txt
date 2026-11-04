@@ -4,17 +4,17 @@
 
 ## Available features
 
-- A shared 4/6/8/12-sector wheel, with configurable actions or empty sectors. Page gestures require optional HTTP/HTTPS access. Toolbar clicks remain available when page gestures are disabled.
-- Per-window tab-switch history (up to 200 entries during the browser session), back/forward through that trail, and switching to the previous tab. This is not navigation history within a webpage.
+- A shared 4/6/8/12-sector wheel, with configurable actions or empty sectors. Page gestures require HTTP/HTTPS site access, granted at install and adjustable in Chrome's extension details. Toolbar clicks remain available when page gestures are disabled.
+- Per-window tab-switch history (up to 200 entries during the browser session), back/forward through that trail, switching to the previous tab, and switching to the neighboring tab on the left or right with wrapping at either end. This is not navigation history within a webpage.
 - Close unpinned tabs to the right; the wheel requires confirmation. Move tabs left/right/first/last or to another window. Duplicate tabs and copy tab links as text or Markdown.
-- Go to or send selected text to ChatGPT / Claude. The target is the leftmost matching tab in the current window, or a new tab beside the source. Existing drafts stop automatic sending. Custom compatible websites can support navigation, fill or send; there is no product-imposed custom-target count limit or paid tier.
-- 20 native Chrome commands, plus page shortcuts for combinations Chrome does not support natively. Exact action metadata is in actions.json; there is no recent-tabs list, floating selection button, or index-entry UI.
+- Go to ChatGPT / Claude, or send selected text there. The target is the leftmost matching tab in the current window, or a new tab beside the source. Existing drafts stop automatic sending. Custom compatible websites can support navigation, fill or send; custom targets are unlimited and not priced separately.
+- 22 native Chrome commands, plus page shortcuts for combinations Chrome does not support natively. Exact action metadata is in actions.json; there is no recent-tabs list, floating selection button, or index-entry UI.
 
 ## Limits
 
-- Chrome 121+, excluding Incognito. Page gestures do not operate on browser-internal or otherwise restricted pages, or while editing an input field.
+- Chrome 121+, excluding Incognito. Page gestures do not operate on browser-internal or otherwise restricted pages. Modifier triggers such as Option / Alt work inside input fields; letter and digit triggers are disabled there.
 - Pricing: every feature is free to try for 14 days (the trial starts at the first successful action); after that a one-time purchase unlocks it. No subscription.
-- No analytics, ads or cloud sync of browsing data. The only developer server is the license service, used to buy, activate and verify a license; those requests contain no browsing data. Selected text is transferred to a third-party website only when the user explicitly invokes fill/send. Failed selections may remain in session storage for up to 30 minutes for recovery.
+- Usage counts stay on your device. No ads, uploaded telemetry or cloud sync of browsing data. The only developer server is the license service, used to buy, activate and verify a license; those requests contain no browsing data. Selected text is transferred to a third-party website only when the user explicitly invokes fill/send. Failed selections may remain in session storage for up to 30 minutes for recovery.
 - AI page adapters depend on website structure and login state. Local fixture tests do not establish compatibility with a live account. Do not promise guaranteed sending on arbitrary websites.
 - Release candidate: public store/download/support URLs must be verified before describing this release as publicly available. No open-source license is asserted here.
 

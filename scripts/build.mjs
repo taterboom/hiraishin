@@ -3,13 +3,33 @@
 //   node scripts/build.mjs           one-off production build
 //   node scripts/build.mjs --watch   rebuild the UI bundles on change
 import { build, context } from 'esbuild';
-import { cp, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 export const OUT_DIR = path.join(root, 'dist', 'hiraishin');
 const watch = process.argv.includes('--watch');
+const require = createRequire(import.meta.url);
+
+// React DOM's client renderer imports Scheduler; all three are included in our UI bundles.
+export const THIRD_PARTY_PACKAGES = ['react', 'react-dom', 'scheduler'];
+
+/** Keep the installed libraries' full license text with every build, even when comments are stripped. */
+export async function writeThirdPartyNotices() {
+  const sections = await Promise.all(THIRD_PARTY_PACKAGES.map(async name => {
+    const packageFile = require.resolve(`${name}/package.json`);
+    const [metadata, licenseText] = await Promise.all([
+      readFile(packageFile, 'utf8'),
+      readFile(path.join(path.dirname(packageFile), 'LICENSE'), 'utf8'),
+    ]);
+    const info = JSON.parse(metadata);
+    return `${info.name} ${info.version} (${info.license})\n\n${licenseText.trim()}\n`;
+  }));
+  await writeFile(path.join(OUT_DIR, 'THIRD_PARTY_NOTICES.txt'),
+    `Third-party software included in Hiraishin\n\n${sections.join('\n---\n\n')}`);
+}
 
 export async function copyStatic() {
   await rm(OUT_DIR, { recursive: true, force: true });
@@ -30,6 +50,7 @@ export async function copyStatic() {
   }
   await cp(path.join(root, 'src', 'locales'), path.join(OUT_DIR, 'src', 'locales'), { recursive: true });
   await writeChromeLocales();
+  await writeThirdPartyNotices();
 }
 
 /** Chrome folder names for each dictionary; `en` is the manifest's default_locale. */

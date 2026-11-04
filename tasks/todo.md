@@ -418,9 +418,55 @@
 - [x] 冒烟：同源与跨站（frames.test 对 127.0.0.1）iframe 测试页；召出、松键执行、不按键 0 次连接、iframe 中途移除自动收尾、原点误差 ≤ 10px（实测 0px）；遮罩底色做过反向验证（Esc 取消未单独断言）
 - [x] 在登录的 claude.ai artifact 页面实测：用户 2026-10-21 确认可用，当时没开 `matchOriginAsFallback`
 - [x] 2026-10-29 用户发现嵌套 iframe 里召不出：内层是 srcdoc 等无网址 frame 时中继进不去。快捷键 / 中继脚本改为 `matchOriginAsFallback: true`（轮盘本身仍只在顶层），旧注册原地补上；冒烟新增两层跨站嵌套（两种焦点）与内层 srcdoc 三项
-- [ ] Windows 实机确认松 Alt 不弹菜单（未验证）
+- [x] Windows 实机确认松 Alt 不弹菜单（用户 2026-11-04 实测通过）
 - [x] 文档：site/privacy.html（三语）「键盘与鼠标事件」一行、STORE_LISTING（三语）、ARCHITECTURE、spec R50
 
 ## 未采纳（不实现）
 - 单独先修 `main.tsx` mousemove / mousedown 缺少的 isTrusted 检查（安全子代理发现，已核实）
 - 中继延迟与 service worker 冷启动测量
+
+# 1.0.0 上线准备（2026-11-04）
+
+用户已实测：真实 ChatGPT / Claude 发送流程、Windows 松 Alt。清理项与暂缓项不做。
+
+## 步骤
+- [x] 版本号 0.3.0 → 1.0.0：manifest、package.json / lock、site/actions.json、三语隐私页（适用版本与更新日期）
+- [x] 商店截图：`npm run store:shots`（scripts/store-shots.mjs）用要发布的 manifest 召出网页轮盘，中日英各拍设置页与轮盘 1280×800。设置页 zh / ja 已拍；轮盘未拍成：与另一进程的冒烟同时跑时，无头 Chrome 连空白页都截不了图。等那边回归结束后单独运行，并逐张目检（选中瓣要是可用状态）
+- [x] 装好即可用：冒烟与 shot 去掉 host_permissions 覆盖，直接跑要发布的 manifest；check 断言 manifest 声明了 http / https 站点访问（冒烟本身待与回归一起跑）
+- [x] STORE_LISTING：标题版本、截图清单、支持网址建议；store-assets/README 同步
+- [x] npm test 121 / check / smoke 67 全绿（`npm run package` 需在文案定稿后重打）
+- [x] STATUS.md 更新
+
+## 三语文案终审（2026-11-04，三个子代理分语言对照代码审查）
+- [x] 站点访问权限提示改为「被收窄后恢复」口吻，统一叫网站访问权限 / サイトへのアクセス / site access
+- [x] 「面板」→ 工具栏轮盘；不存在的「仅填入」标签；日文 振る / ウィンドウ / セレクター / 切り替え履歴；英文 pending selections / Retry fill
+- [x] Ctrl+- 不是默认绑定；快捷键关闭右侧立即执行、轮盘先确认；隐私页「唯一开发者服务器」与反馈服务矛盾；Limited Use 链接文字；删测试安装包句
+- [x] 商店：ja / en 短描述、商标声明、审核用英文权限理由与远程代码声明、截图清单
+- [ ] 三语首页安装区仍是「发布候选 / 加载已解压」：需商店链接后改（另见 STATUS）
+- [x] 隐私页三语“授权”一行补上授权服务的存储范围、Cloudflare 日志（抽样 IP、最多 7 天）、付款记录保留与删除方式（用户提供文案）；STORE_LISTING 隐私表单说明同步
+- 未改（用户决定不管）：中文 标签 / 标签页 / Tab 混用；飛雷神 名称的 IP 风险
+
+## 需要用户做（我没有权限）
+- 商店后台：上传包、填文案 / 截图 / 隐私网址 / 数据使用声明、提交审核
+- 部署网站（`npm run site:deploy`），让隐私页显示 1.0.0
+
+# 最终上架检查（2026-11-04）
+
+- [x] 正式配置 / 环境变量核对；正式服务健康检查、公钥一致；调试录制环境变量反向验证会阻止打包
+- [x] 三语命令数、试用起点、授权同步 / 验证披露与权限理由，Limited Use 声明，README / llms / 商店文案对齐
+- [x] 补齐发布包第三方许可；固化版本、隐私适用版本、商店字段长度、许可完整性检查
+- [x] npm test 121 / 121、package 内 check 通过；1.0.0 ZIP 完整性与禁止内容检查通过
+- [ ] 浏览器完整回归：已确认并修正 CDP 输入固定 5 秒延迟，增强 iframe relay 前置和 dialog 卸载断言；Chrome 149 无头渲染帧停滞，有头 fixture 加载中断，Chrome 145 未启动 DevTools，需可靠环境补跑
+- [x] 更新 STATUS 与 docs/RELEASE_REVIEW；旧 0.2.0 审查明确为历史
+- [ ] 真实支付 / 领取 / 激活 / 退款撤销，部署新版网站，商店后台填写 / 上传 / 提审
+- [ ] 已知适配边界：ChatGPT 中日文界面正在生成时再次发送选区的保护，英文对照；未猜测新选择器，已收窄官网承诺
+
+- [ ] 公开销售条款 / 退款政策 / 实际卖方说明：已询问实际信息或现有公开网址；不得猜退款承诺，需同时核对 Stripe 后台配置
+
+# 销售与退款条款草案（2026-11-04）
+
+- [x] 从 Menkyo 最新进度核对 44san 品牌和现有价格记录，区分源码记录与正式后台核验
+- [x] 核对 Chrome 商店、Stripe Managed Payments、Link 与消费者厅一手来源；MoR 不替代实际销售方，不把 60 天当无理由退款
+- [x] 完成 docs/SALES_TERMS_DRAFT.md 三语草案，提出独立于免费试用的付款后 14 天全额退款方案，明确未生效且不进入发布包
+- [ ] 收款主体个人 / 公司及登记国家 / 地区，实际法定销售方与经营者披露方式
+- [ ] 接受或调整 14 天自愿退款方案，填写生效日期，再核对正式付款页 / Stripe 配置并发布链接

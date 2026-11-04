@@ -47,9 +47,10 @@
       "featureList": [
         "Tab access history back and forward, per window",
         "Switch to the previous tab",
+        "Switch to the tab on the left or right, wrapping around at either end",
         "Close tabs to the right, duplicate tab, move tab left/right/first/last, move tabs to a new window",
         "Copy tab links as plain text or Markdown",
-        "Go to or send selected text to ChatGPT or Claude (leftmost matching tab in the current window)",
+        "Go to ChatGPT or Claude, or send selected text there (leftmost matching tab in the current window)",
         "Custom target websites with URL rules and input selectors",
         "Browser shortcuts plus in-page shortcuts such as Ctrl+-",
         "Interface in English, Simplified Chinese and Japanese"
@@ -62,7 +63,7 @@
         { "@type": "Question", "name": "How is Hiraishin's tab history different from the browser's Back button?", "acceptedAnswer": { "@type": "Answer", "text": "The browser's Back button returns to the previous URL within the same tab. Hiraishin records the trail of tabs you switch between, separately for each window, and going back switches to the tab you had active before, much like location history in VS Code." } },
         { "@type": "Question", "name": "How do I close all tabs to the right of the current tab with a shortcut?", "acceptedAnswer": { "@type": "Answer", "text": "After installing Hiraishin, open chrome://extensions/shortcuts and assign any key combination to the \"Close tabs to the right\" command. Pinned tabs and other windows are not affected." } },
         { "@type": "Question", "name": "How do I send selected text on a web page straight to ChatGPT or Claude?", "acceptedAnswer": { "@type": "Answer", "text": "Select the text, then send it from the wheel, a shortcut or the right-click menu. Hiraishin switches to the leftmost ChatGPT / Claude chat tab in the current window (or opens one), fills in the text and sends it. If the input box already contains a draft, it stops and tells you instead of overwriting it." } },
-        { "@type": "Question", "name": "Chrome extension shortcuts can't use the minus key. How does Hiraishin support Ctrl+-?", "acceptedAnswer": { "@type": "Answer", "text": "On web pages, Hiraishin listens for key presses itself as \"in-page shortcuts\", complementing Chrome's native shortcuts. In the address bar and on Chrome's internal pages, use native shortcuts or the toolbar wheel." } },
+        { "@type": "Question", "name": "Chrome extension shortcuts can't use the minus key. How does Hiraishin support Ctrl+-?", "acceptedAnswer": { "@type": "Answer", "text": "On web pages, Hiraishin listens for key presses itself as \"in-page shortcuts\", complementing Chrome's browser shortcuts. In the address bar and on Chrome's internal pages, use browser shortcuts or the toolbar wheel." } },
         { "@type": "Question", "name": "Does Hiraishin upload my browsing data?", "acceptedAnswer": { "@type": "Answer", "text": "No. Settings and your tab trail stay on your device. Selected text is handed to the AI website you chose only when you explicitly fill or send it." } }
       ]
     },
@@ -118,7 +119,7 @@
   <h2>What it solves</h2>
   <section class="feature">
     <h3>“Where was that page I just had?” → Tab history back / forward</h3>
-    <p>Each window keeps its own record of the tabs you actually switched to, so you can go back and forward like location history in VS Code. The defaults are <kbd>Ctrl+,</kbd> / <kbd>Ctrl+.</kbd>, and <kbd>Ctrl+-</kbd> / <kbd>Ctrl+Shift+-</kbd> also work as in-page shortcuts. Opening a new tab by hand after going back cuts off the forward branch; at either end it stays put.</p>
+    <p>Each window keeps its own record of the tabs you actually switched to, so you can go back and forward like location history in VS Code. The defaults are <kbd>Ctrl+,</kbd> / <kbd>Ctrl+.</kbd>; you can also set <kbd>Ctrl+-</kbd> / <kbd>Ctrl+Shift+-</kbd> as in-page shortcuts. Switching to another tab yourself after going back cuts off the forward branch; at either end it stays put.</p>
   </section>
   <section class="feature">
     <h3>“I'm done with this part of the work” → Close tabs to the right, move to a new window</h3>
@@ -130,16 +131,16 @@
   </section>
   <section class="feature">
     <h3>“I found something and want AI on it now” → Fill or send to ChatGPT / Claude</h3>
-    <p>Select text and use the wheel, a shortcut or the right-click menu: Hiraishin switches to the leftmost chat tab in the current window (or opens one next to your tab), fills in the text and sends it. An existing draft is never overwritten, and you are told clearly when you are signed out, a reply is still generating, or the submission can't be confirmed. Optionally return to the source page after sending. Compatible websites can be added as custom targets; they need a correct URL rule and page selectors.</p>
+    <p>Select text and use the wheel, a shortcut or the right-click menu: Hiraishin switches to the leftmost chat tab in the current window (or opens one next to your tab), fills in the text and sends it. An existing draft is never overwritten, and you are told clearly when you are signed out or the submission can't be confirmed. Optionally return to the source page after sending. Compatible websites can be added as custom targets; they need a correct URL rule and page selectors.</p>
   </section>
 
   <h2>All actions</h2>
   <table>
     <thead><tr><th>Category</th><th>Actions</th></tr></thead>
     <tbody>
-      <tr><td>Navigate</td><td>Tab history back / forward · Previous tab</td></tr>
-      <tr><td>Arrange</td><td>Close tabs to the right · Move tab left / right / to start / to end · Move current tab, or it with the tabs to its left / right, to a new window</td></tr>
-      <tr><td>Duplicate and take away</td><td>Duplicate tab · Copy links · Copy as Markdown links</td></tr>
+      <tr><td>Navigate</td><td>Tab history back / forward · Previous tab · Switch to the left / right tab (wraps around)</td></tr>
+      <tr><td>Arrange</td><td>Close tabs to the right · Move tab left / right / to start / to end · Move the current tab, alone or with the tabs to its left / right, to a new window</td></tr>
+      <tr><td>Duplicate and copy</td><td>Duplicate tab · Copy links · Copy as Markdown links</td></tr>
       <tr><td>AI targets</td><td>Go to / Send to ChatGPT, Claude or the default target; custom targets support go to, fill or send depending on their capability</td></tr>
     </tbody>
   </table>
@@ -149,7 +150,7 @@
   <details><summary>How is Hiraishin's tab history different from the browser's Back button?</summary><p>The browser's Back button returns to the previous URL within the same tab. Hiraishin records the trail of tabs you switch between, separately for each window, and going back switches to the tab you had active before.</p></details>
   <details><summary>How do I close all tabs to the right of the current tab with a shortcut?</summary><p>Open chrome://extensions/shortcuts and assign any key combination to “Close tabs to the right”. Pinned tabs and other windows are not affected.</p></details>
   <details><summary>How do I send selected text on a web page straight to ChatGPT or Claude?</summary><p>Select the text, then send it from the wheel, a shortcut or the right-click menu. The target is the leftmost chat tab in the current window, or a new one if there is none. If the input box already has a draft, Hiraishin stops and tells you.</p></details>
-  <details><summary>Chrome extension shortcuts can't use the minus key. How is Ctrl+- supported?</summary><p>On web pages, Hiraishin listens for the keys itself as “in-page shortcuts”. In the address bar and on Chrome's internal pages, use native shortcuts or the toolbar wheel.</p></details>
+  <details><summary>Chrome extension shortcuts can't use the minus key. How is Ctrl+- supported?</summary><p>On web pages, Hiraishin listens for the keys itself as “in-page shortcuts”. In the address bar and on Chrome's internal pages, use browser shortcuts or the toolbar wheel.</p></details>
   <details><summary>Does it upload my browsing data?</summary><p>No. Settings and your tab trail stay on your device. Selected text goes to the AI website you chose only when you explicitly fill or send it.</p></details>
   <details><summary>Does it cost anything?</summary><p>Every feature is free to try for 14 days, starting the first time an action runs successfully. After the trial, a one-time purchase keeps it working; there is no subscription. Your settings and pending selections are kept when the trial ends.</p></details>
 

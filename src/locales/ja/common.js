@@ -2,7 +2,7 @@
 /** @type {Record<string, string>} */
 export default {
   'manifest.name': '飛雷神 Hiraishin',
-  'manifest.description': 'Option / Alt を押しながらマウスを振ってホイールを開き、タブの切り替え・整理・コピー、選択テキストの ChatGPT / Claude への送信をすばやく。',
+  'manifest.description': 'Option / Alt を押しながらマウスを振るとホイールが開き、タブの切り替え・整理・複製、リンクのコピー、選択テキストの ChatGPT / Claude への送信をすばやく実行できます。',
   'manifest.actionTitle': '飛雷神 Hiraishin',
   'manifest.cmd.history-back': 'タブ履歴：戻る',
   'manifest.cmd.history-forward': 'タブ履歴：進む',
@@ -27,11 +27,11 @@ export default {
   'manifest.cmd.go-to-default-target': 'デフォルトの送信先を開く',
   'manifest.cmd.send-default-target': 'デフォルトの送信先に送信',
 
-  'category.travel': '移動',
+  'category.travel': '切り替え',
   'category.arrange': '整理',
   'category.copy': '複製',
   'category.ai': 'AI 送信先',
-  'category.take': '持ち出し',
+  'category.take': 'コピー',
 
   'action.history-back': 'タブ履歴を戻る',
   'action.history-forward': 'タブ履歴を進む',

@@ -1,20 +1,49 @@
 import assert from 'node:assert/strict';
 import { readFile, access, readdir } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { buildAll, OUT_DIR } from './build.mjs';
+import { buildAll, OUT_DIR, THIRD_PARTY_PACKAGES } from './build.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 await buildAll();
 const dist = `${OUT_DIR}/`;
+// The published artifact must retain each bundled dependency's version and complete license.
+const require = createRequire(import.meta.url);
+const notices = await readFile(`${dist}THIRD_PARTY_NOTICES.txt`, 'utf8');
+for (const name of THIRD_PARTY_PACKAGES) {
+  const packageFile = require.resolve(`${name}/package.json`);
+  const info = JSON.parse(await readFile(packageFile, 'utf8'));
+  const licenseText = await readFile(path.join(path.dirname(packageFile), 'LICENSE'), 'utf8');
+  assert.ok(notices.includes(`${info.name} ${info.version} (${info.license})`), `${name}: third-party notice lacks the installed version`);
+  assert.ok(notices.includes(licenseText.trim()), `${name}: third-party notice lacks the complete license`);
+}
 // The gesture recorder is a local tuning aid; it must never reach a build that could ship.
 // The marker is TRACE_PREFIX in ui/overlay/trace.ts.
 assert.ok(!(await readFile(`${dist}ui/overlay.js`, 'utf8')).includes('hiraishin-trace:'),
   'ui/overlay.js contains the gesture recorder: rebuild without HIRAISHIN_TRACE=1');
 const manifest = JSON.parse(await readFile(new URL('../manifest.json', import.meta.url), 'utf8'));
+const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+const lock = JSON.parse(await readFile(new URL('../package-lock.json', import.meta.url), 'utf8'));
+assert.equal(packageJson.version, manifest.version, 'package.json version must match manifest');
+assert.equal(lock.version, manifest.version, 'package-lock.json version must match manifest');
+assert.equal(lock.packages?.['']?.version, manifest.version, 'lockfile root package version must match manifest');
+for (const [page, pattern] of [
+  ['privacy.html', /Applies to version\s+([\d.]+)/],
+  ['zh/privacy.html', /适用版本：\s*([\d.]+)/],
+  ['ja/privacy.html', /対象バージョン：\s*([\d.]+)/],
+]) {
+  const html = await readFile(`${dist}${page}`, 'utf8');
+  assert.equal(html.match(pattern)?.[1], manifest.version, `${page}: applicable version must match manifest`);
+}
 assert.equal(manifest.manifest_version, 3);
 assert.equal(manifest.background.type, 'module');
+// The in-page wheel is the main entry: it has to work the moment the extension is installed, with
+// no trip to the settings page to grant sites (R51). Smoke runs this manifest unmodified.
+assert.deepEqual(manifest.host_permissions, ['http://*/*', 'https://*/*'], 'site access must be granted at install');
+assert.ok(!manifest.optional_host_permissions, 'site access is required, not optional');
 const files = [manifest.background.service_worker, manifest.action.default_popup, manifest.options_ui.page, 'offscreen.html',
   ...Object.values(manifest.icons), ...Object.values(manifest.action.default_icon)];
 for (const file of new Set(files)) await access(`${dist}${file}`);
@@ -62,6 +91,11 @@ assert.equal(manifest.default_locale, 'en');
 for (const folder of Object.values(CHROME_LOCALES)) {
   const messages = JSON.parse(await readFile(`${dist}_locales/${folder}/messages.json`, 'utf8'));
   for (const name of usedMessages) assert.ok(messages[name]?.message, `_locales/${folder} lacks ${name}`);
+  // Chrome limits the localized strings, not their UTF-8 byte size or __MSG_*__ references.
+  for (const [name, max] of Object.entries({ name: 75, description: 132 })) {
+    const text = messages[name]?.message;
+    assert.ok(typeof text === 'string' && text.length <= max, `_locales/${folder}: ${name} must be at most ${max} characters`);
+  }
 }
 for (const id of COMMAND_IDS) assert.equal(manifest.commands[id].description, `__MSG_cmd_${id.replace(/-/g, '_')}__`, `${id} description must come from _locales`);
 for (const page of ['popup.html', 'options.html', 'offscreen.html']) {

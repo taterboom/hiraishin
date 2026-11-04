@@ -1,7 +1,7 @@
 /** Service worker and domain modules: results, errors, notifications, context menus. */
 /** @type {Record<string, string>} */
 export default {
-  'bg.locked': 'Your trial has ended. Buy or enter a license key to keep using Hiraishin; your settings and pending items are kept.',
+  'bg.locked': 'Your trial has ended. Buy or enter a license key to keep using Hiraishin; your settings and pending selections are kept.',
   'bg.menu.root': 'Hiraishin',
 
   'bg.error.generic': 'Something went wrong.',
@@ -19,9 +19,9 @@ export default {
   'bg.error.noConfirmNeeded': 'This action does not need confirmation.',
   'bg.error.confirmExpired': 'The confirmation has expired. Reopen the wheel.',
   'bg.error.activeChanged': 'The current tab has changed. Reopen the wheel.',
-  'bg.error.panelOnly': 'This can only be done from the extension panel.',
+  'bg.error.panelOnly': 'This can only be done from the toolbar wheel.',
   'bg.error.invalidRequest': 'Invalid request.',
-  'bg.error.entryChanged': 'This entry has changed. Reopen the panel.',
+  'bg.error.entryChanged': 'This entry has changed. Reopen the toolbar wheel.',
   'bg.error.invalidSettings': 'Invalid settings.',
 
   'bg.history.edge': 'Reached the end of the tab history.',
@@ -33,18 +33,18 @@ export default {
   'bg.tabs.atEdge': 'Already at the edge.',
   'bg.tabs.enterPosition': 'Enter a target position.',
   'bg.tabs.atPosition': 'Already at that position.',
-  'bg.tabs.wholeWindow': 'That is already the whole window; nothing to move.',
+  'bg.tabs.wholeWindow': 'These are already all the tabs in this window; nothing to move.',
   'bg.links.copied': 'Copied {count} links.',
   'bg.links.copied.one': 'Copied {count} link.',
   'bg.links.none': 'There are no links to copy.',
 
   'bg.transfer.no-selection': 'No text is selected, so nothing was done.',
-  'bg.transfer.needs-permission': 'Allow access to this site in Settings before filling or sending.',
+  'bg.transfer.needs-permission': 'Hiraishin has no access to this site, so it cannot fill or send. Allow site access again in Settings.',
   'bg.transfer.unsupported': 'This target only supports Go to, not Fill or Send.',
-  'bg.transfer.login': 'You are not signed in to the target site. The selection is kept; retry it from the panel.',
+  'bg.transfer.login': 'You are not signed in to the target site. The selection is kept; retry it from Pending selections in the toolbar wheel.',
   'bg.transfer.generating': 'The target is still generating a reply and cannot take a new message. The selection is kept.',
-  'bg.transfer.draft': 'The input already has a draft, so nothing was sent. The selection is kept; use "Fill" to append it instead.',
-  'bg.transfer.not-ready': 'The input on the target page is not ready or not supported. The selection is kept; retry Fill or copy it manually.',
+  'bg.transfer.draft': 'The input already has a draft, so nothing was sent. The selection is kept; use “Retry fill” in the toolbar wheel to add it to the draft.',
+  'bg.transfer.not-ready': 'The input on the target page is not ready or not supported. The selection is kept; use Retry fill or copy it manually.',
   'bg.transfer.fill-failed': 'Could not write the selection into the input. The selection is kept; copy it manually.',
   'bg.transfer.cannot-submit': 'The text was filled in, but the page did not accept sending. Please send it manually.',
   'bg.transfer.uncertain': 'The text was filled in, but it is unclear whether it was sent. It was not retried automatically.',
@@ -70,7 +70,7 @@ export default {
   'bg.usage.source.command': 'Browser shortcut',
   'bg.usage.source.web': 'In-page shortcut',
   'bg.usage.source.menu': 'Context menu',
-  'bg.usage.source.retry': 'Fill retry',
+  'bg.usage.source.retry': 'Retry fill',
   'bg.usage.source.other': 'Other',
 
   'bg.keys.reservedMac': 'This combination is reserved by macOS or Chrome, so web pages never receive it.',

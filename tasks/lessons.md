@@ -104,3 +104,12 @@
 ## 2026-10-29 · 嵌套 iframe 召不出轮盘
 
 - **「真实页面测过可用」只覆盖那一种 frame 结构。** 当时用一个 artifact 页面验证后决定不开 `matchOriginAsFallback`，但嵌套预览的内层常是 srcdoc，中继根本注入不进去。按 frame 类型（跨站、同源、嵌套、srcdoc / about:blank）列测试矩阵，比按「某个网站能不能用」验证更可靠；冒烟现在覆盖了这几类。
+
+## 截图 / 冒烟卡住时先看有没有别人的 Chrome（2026-11-04）
+- 无头截图连 data: 空白页都不返回时，问题不在脚本：另一个会话正在同一台机器上跑冒烟。先 `ps aux | grep "Chrome for Testing"` 和 `git status` 看有没有并行的进程或改动，再排查代码；并行时不要再起浏览器，等对方跑完。
+
+## 2026-11-04 · 固定五秒的 CDP 鼠标输入延迟
+
+- 上一条并行 Chrome 记录是排查线索，不能单凭同时存在两个进程就认定原因。本轮隔离页面实测：无扩展时，GPU 开 / 关的 mouseMoved 都约 5000ms；启用页面 CDP 的 `DOM.enable` → `Overlay.enable` 后降至 0.4–0.9ms，可信页面事件也立即收到。冒烟在 attach 页面时启用这两个域，保持全部断言、20 次空闲移动与 8 分钟看门狗。
+- 固定延迟先计时每条协议命令，再用无扩展页面做对照。不要因此改产品手势逻辑、减少覆盖或单纯放宽超时。上游复现：[Puppeteer #4868](https://github.com/puppeteer/puppeteer/issues/4868)。
+- 打包会剥离 bundle 注释时，依赖许可必须另存完整文本随包发布；构建生成 notices，check 对照实际依赖版本与原始 LICENSE 检查。

@@ -6,7 +6,7 @@
 //
 // Requires `npm run build` first; needs Chrome for Testing (branded Chrome ignores --load-extension).
 import { createHash } from 'node:crypto';
-import { readFile, mkdtemp, cp, rm, writeFile, readdir, realpath, mkdir } from 'node:fs/promises';
+import { mkdtemp, cp, rm, writeFile, readdir, realpath, mkdir } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
@@ -37,9 +37,6 @@ async function findChrome() {
 
 const EXT_DIR = await realpath(await mkdtemp(path.join(os.tmpdir(), 'hira-shot-')));
 await cp(path.join(root, 'dist/hiraishin'), EXT_DIR, { recursive: true });
-const manifest = JSON.parse(await readFile(path.join(EXT_DIR, 'manifest.json'), 'utf8'));
-manifest.host_permissions = ['http://*/*', 'https://*/*'];
-await writeFile(path.join(EXT_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2));
 const PROFILE = await realpath(await mkdtemp(path.join(os.tmpdir(), 'hira-shot-p-')));
 const chrome = spawn(await findChrome(), ['--headless=new', '--disable-gpu', `--remote-debugging-port=${PORT}`,
   '--remote-allow-origins=*', `--user-data-dir=${PROFILE}`, `--load-extension=${EXT_DIR}`,
