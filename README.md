@@ -18,6 +18,8 @@ Manifest V3 · 后台与内容脚本为无框架 ES 模块 · 面板与设置页
 
 ## 安装
 
+用户安装：[Chrome 网上应用店](https://chromewebstore.google.com/detail/hiraishin/egdidoghedcooilhfnoppbkdjdjnhmcg)。下面是开发者从源码加载的步骤。
+
 需要 Chrome 121 或更新版本，「切回上一 Tab」依赖 `Tab.lastAccessed`。
 
 1. `npm install && npm run build`，产物在 `dist/hiraishin/`。
@@ -25,7 +27,7 @@ Manifest V3 · 后台与内容脚本为无框架 ES 模块 · 面板与设置页
 3. 点击「加载已解压的扩展程序」，选择 **`dist/hiraishin`**（仓库根目录不能直接加载，面板脚本是构建产物）。
 4. 在工具栏的扩展菜单中固定 **飛雷神 Hiraishin**；点击图标打开点击式轮盘，右上角设置按钮进入设置页。
 
-已有安装包时，可将 `hiraishin-<version>.zip` 解压后加载。公开下载地址与商店链接在发布后提供。
+已有安装包时，可将 `hiraishin-<version>.zip` 解压后加载。
 
 ## 功能
 

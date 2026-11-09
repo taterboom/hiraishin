@@ -16,7 +16,7 @@
 - Pricing: every feature is free to try for 14 days (the trial starts at the first successful action); after that a one-time purchase unlocks it. No subscription.
 - Usage counts stay on your device. No ads, uploaded telemetry or cloud sync of browsing data. The only developer server is the license service, used to buy, activate and verify a license; those requests contain no browsing data. Selected text is transferred to a third-party website only when the user explicitly invokes fill/send. Failed selections may remain in session storage for up to 30 minutes for recovery.
 - AI page adapters depend on website structure and login state. Local fixture tests do not establish compatibility with a live account. Do not promise guaranteed sending on arbitrary websites.
-- Release candidate: public store/download/support URLs must be verified before describing this release as publicly available. No open-source license is asserted here.
+- Install: [Chrome Web Store](https://chromewebstore.google.com/detail/hiraishin/egdidoghedcooilhfnoppbkdjdjnhmcg). Support: https://koe.44san.com/hiraishin?lang=en. No open-source license is asserted here.
 
 ## Languages
 
