@@ -1,6 +1,6 @@
 # Chrome 网上应用店上架资料 · 1.1.0
 
-状态：1.0.0 已上架（2026-11-09 确认商店页可访问）。1.1.0 待提交：长描述三语各加一条「滚轮一次跳多步」（下方已改），短描述与截图不变：https://chromewebstore.google.com/detail/hiraishin/egdidoghedcooilhfnoppbkdjdjnhmcg
+状态：1.0.0 已上架（2026-11-09 确认商店页可访问）。1.1.0 已提交审核（2026-11-11）：长描述三语各加一条「滚轮一次跳多步」（下方已改），短描述与截图不变：https://chromewebstore.google.com/detail/hiraishin/egdidoghedcooilhfnoppbkdjdjnhmcg
 
 > **收费口径（2026-09-30 已统一）**：14 天全功能试用，从首次成功动作开始计时；之后一次性购买，非订阅；实际售价需与正式付款页核对，当前文案不写金额。唯一的开发者服务器是授权服务，不含浏览数据。网站首页三语 FAQ、`llms.txt`、README 与隐私页保持同一说法；JSON-LD 的 `offers` 暂时删除，定价后再补。
 
