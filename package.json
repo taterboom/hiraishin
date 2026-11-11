@@ -1,6 +1,6 @@
 {
   "name": "hiraishin",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "飛雷神 · A small Chrome toolbox for moving through tabs and sending selections to AI.",

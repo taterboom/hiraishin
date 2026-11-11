@@ -1,6 +1,6 @@
-# Chrome 网上应用店上架资料 · 1.0.0
+# Chrome 网上应用店上架资料 · 1.1.0
 
-状态：1.0.0 已上架（2026-11-09 确认商店页可访问）：https://chromewebstore.google.com/detail/hiraishin/egdidoghedcooilhfnoppbkdjdjnhmcg
+状态：1.0.0 已上架（2026-11-09 确认商店页可访问）。1.1.0 待提交：长描述三语各加一条「滚轮一次跳多步」（下方已改），短描述与截图不变：https://chromewebstore.google.com/detail/hiraishin/egdidoghedcooilhfnoppbkdjdjnhmcg
 
 > **收费口径（2026-09-30 已统一）**：14 天全功能试用，从首次成功动作开始计时；之后一次性购买，非订阅；实际售价需与正式付款页核对，当前文案不写金额。唯一的开发者服务器是授权服务，不含浏览数据。网站首页三语 FAQ、`llms.txt`、README 与隐私页保持同一说法；JSON-LD 的 `offers` 暂时删除，定价后再补。
 
@@ -47,6 +47,7 @@
 
 穿梭、整理、复制
 • 在标签页切换轨迹中后退、前进，或切回上一标签。这不是网页地址的浏览后退。也可按标签栏位置切换到左侧或右侧标签，到头绕回。
+• 一次走多步：选中这些瓣时，标签栏会先选中将要去的标签；不松手滚动滚轮可以改步数（如左边第 3 个、后退 2 次），松开一次跳到位。
 • 移动标签到左侧、右侧、最左、最右或新窗口，保留相应分组。
 • 复制标签页；复制一个或多个标签的链接，支持纯文本和 Markdown。
 
@@ -101,6 +102,7 @@ Option（Windows / Linux では Alt）を押しながらマウスを振ってア
 
 切り替え・整理・コピー
 • タブの切り替え履歴をたどって戻る・進む、または直前のタブに切り替えます。ブラウザの「戻る」（ページの履歴）とは別の機能です。タブバーの左隣・右隣へ切り替えることもでき、端まで来ると反対側へ戻ります。
+• 複数ステップを一度に：これらのセクターを選ぶと、移動先のタブがタブバーで先に選択されます。離さずにスクロールすると歩数を変えられ（3 つ左のタブ、2 回戻る など）、離すと一度で移動します。
 • タブを左、右、先頭、末尾、新しいウィンドウへ移動し、タブグループも維持します。
 • タブを複製し、1 つまたは複数のタブのリンクをプレーンテキストまたは Markdown でコピーします。
 
@@ -155,6 +157,7 @@ Your directions, your actions
 
 Navigate, arrange, duplicate
 • Go back and forward through your tab-switching trail, or switch to the previous tab. This is not the page's own Back navigation. You can also switch to the neighboring tab on the left or right, wrapping at either end.
+• Several steps at once: while one of these sectors is selected, the tab it leads to is selected in the tab strip first; scroll before releasing to change the number of steps (three tabs to the left, two steps back), then release to jump there in one go.
 • Move tabs left, right, to the start, to the end or to a new window, keeping their groups.
 • Duplicate tabs, and copy the links of one or more tabs as plain text or Markdown.
 

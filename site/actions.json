@@ -1,6 +1,6 @@
 {
   "name": "Hiraishin",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Hold Option / Alt and flick a wheel to switch, arrange and duplicate tabs, copy links, and send selected text to ChatGPT or Claude.",
   "homepage": "https://hiraishin.44san.com/",
   "minimumChrome": "121",
