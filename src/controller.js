@@ -1,7 +1,7 @@
 // Composition root for the service worker: per-window history with an ordered queue,
 // the action dispatcher shared by every entry point, and message routing with the
 // content-script boundary (spec §6.6, §8).
-import { createHistory, normalizeHistory, recordVisit, pruneHistory, findTarget, moveCursor, replaceTab } from './history.js';
+import { MAX_HISTORY_ENTRIES, createHistory, normalizeHistory, recordVisit, pruneHistory, findTarget, walkHistory, historyReach, moveCursor, replaceTab } from './history.js';
 import { createSettingsStore, SETTINGS_KEY, PAGE_ORIGINS } from './settings.js';
 import { listActions, getAction, COMMAND_IDS } from './actions.js';
 import { createTabOps } from './tab-ops.js';
@@ -20,6 +20,14 @@ export const HISTORY_KEY = 'tabHistory';
 export { SETTINGS_KEY, PAGE_ORIGINS, COMMAND_IDS };
 const MENU_ROOT = 'hiraishin-root';
 const ACTIVATION_MARKER_TTL = 10000;
+const PREVIEW_TTL = 15000;
+/** Actions whose target the wheel selects in the tab strip before running them. Of these, the
+ *  strip and history walks can also be scrolled several steps at once. */
+const PREVIEW_KINDS = new Set(['activate-relative', 'history', 'previous-tab']);
+/** A scrolled offset in steps: minus is left or back, plus is right or forward, 0 stays. Its range
+ *  is not capped here: the strip clamps it to the tab count (tab-ops.relativeTarget) and the
+ *  history stops at its ends, the same limits the wheel counts against. */
+const stepOffset = value => (Number.isSafeInteger(value) ? value : 0);
 export const lockedMessage = () => t('bg.locked');
 
 /** @param {any} api @param {{ license?: import('./license.js').LicenseOptions }} [options] */
@@ -34,6 +42,12 @@ export function createController(api, { license: licenseOptions } = {}) {
   /** The latest wheel gesture each tab began inside an embedded frame: { id, frameId }. The top
    *  frame runs the action, but a send reads the selection where the gesture started. */
   const relayGestures = new Map();
+  /** The tab a wheel gesture would land on, shown in the tab strip as part of the selection:
+   *  windowId → { activeId, selection, timer }. The selection belongs to the user (copying links
+   *  reads it), so the one they had is kept and put back when the gesture ends; a stray preview
+   *  would also make Cmd+W close the target, and the timer restores it if no end ever arrives. */
+  const previews = new Map();
+  let previewTail = Promise.resolve();
 
   // Every settings read also sets the worker's language, so whatever runs next (a notification, a
   // menu title, an error) speaks the language the user picked, including right after a change.
@@ -132,12 +146,82 @@ export function createController(api, { license: licenseOptions } = {}) {
     return { changed: true };
   }
 
-  async function navigate(windowId, direction) {
-    if (direction !== -1 && direction !== 1) throw new Error(t('bg.error.invalidDirection'));
+  /** Back (minus) or forward (plus) by `offset` presses at once: one cursor move, one activation. */
+  async function navigate(windowId, offset) {
+    if (!Number.isSafeInteger(offset) || offset === 0) throw new Error(t('bg.error.invalidDirection'));
     const context = await windowContext(windowId);
-    const target = findTarget(context.history, direction, context.active.id);
+    const target = walkHistory(context.history, offset, context.active.id);
     if (!target) { await persist(); return { changed: false }; }
     return activate(context, target);
+  }
+
+  // ---------------------------------------------------------------- step preview
+
+  /** Previews, clears and commits run strictly in order, so a reply arriving late can never
+   *  restore a selection that a later clear already removed. */
+  function inPreviewOrder(task) {
+    const result = previewTail.then(task);
+    previewTail = result.catch(() => {});
+    return result;
+  }
+
+  /** Forget a preview without touching the strip: an activation already replaced the selection,
+   *  and whatever is selected now belongs to the user. */
+  function dropPreview(windowId) {
+    const preview = previews.get(windowId);
+    if (!preview) return null;
+    previews.delete(windowId);
+    clearTimeout(preview.timer);
+    return preview;
+  }
+
+  /** Put back the selection the user had before the first preview. Listing the active tab first
+   *  keeps it active. Only for the tab the gesture started from: after a switch the saved
+   *  selection is someone else's past and must not overwrite the present one. */
+  async function clearPreview(windowId) {
+    const preview = dropPreview(windowId);
+    if (!preview) return;
+    const tabs = await api.tabs.query({ windowId });
+    const active = tabs.find(tab => tab.active);
+    if (!active || active.id !== preview.activeId) return;
+    const kept = tabs.filter(tab => tab.id !== active.id && preview.selection.includes(tab.id));
+    await api.tabs.highlight({ windowId, tabs: [active.index, ...kept.map(tab => tab.index)] }).catch(() => {});
+  }
+
+  /** Where an action would land, `offset` steps away for the walks, without going there. */
+  async function stepTarget(windowId, action, offset) {
+    if (action.kind === 'previous-tab') return tabOps.previousTarget(windowId);
+    if (!offset) return null;
+    if (action.kind === 'activate-relative') return tabOps.relativeTarget(windowId, offset);
+    return enqueue(async () => {
+      const { tabs, active, history } = await windowContext(windowId);
+      const landed = walkHistory(history, offset, active.id);
+      const target = landed && tabs.find(tab => tab.id === landed.tabId);
+      return target ? { active, target } : null;
+    });
+  }
+
+  /** Select the would-be target next to the active tab without activating it: tabs.highlight
+   *  keeps the first listed tab active, while tabs.update({ highlighted }) would switch to it. */
+  async function previewStep(windowId, action, offset) {
+    const found = await stepTarget(windowId, action, offset);
+    if (!found || found.target.id === found.active.id) {
+      await clearPreview(windowId);
+      return {};
+    }
+    let preview = previews.get(windowId);
+    // A snapshot taken from another tab describes a selection that no longer exists.
+    if (preview?.activeId !== found.active.id) dropPreview(windowId);
+    preview = previews.get(windowId);
+    if (!preview) {
+      const selected = await api.tabs.query({ windowId, highlighted: true });
+      preview = { activeId: found.active.id, selection: selected.map(tab => tab.id), timer: 0 };
+      previews.set(windowId, preview);
+    }
+    clearTimeout(preview.timer);
+    preview.timer = setTimeout(() => void inPreviewOrder(() => clearPreview(windowId)), PREVIEW_TTL);
+    await api.tabs.highlight({ windowId, tabs: [found.active.index, found.target.index] });
+    return {};
   }
 
   async function closeRight(windowId, approved = null) {
@@ -255,12 +339,20 @@ export function createController(api, { license: licenseOptions } = {}) {
     try {
       switch (action.kind) {
         case 'history': {
-          const outcome = await enqueue(() => navigate(ctx.windowId, action.direction));
+          // A scrolled wheel names where it landed, possibly past 0 into the other direction.
+          const offset = ctx.args?.offset === undefined ? action.direction : stepOffset(ctx.args.offset);
+          if (!offset) { result = { status: 'noop', message: '', notify: false }; break; }
+          const outcome = await enqueue(() => navigate(ctx.windowId, offset));
           result = outcome.changed ? ok() : { status: 'noop', message: t('bg.history.edge'), notify: false };
           break;
         }
         case 'previous-tab': result = await enqueue(() => tabOps.previousTab(ctx.windowId)); break;
-        case 'activate-relative': result = await enqueue(() => tabOps.activateRelative(ctx.windowId, action.offset)); break;
+        case 'activate-relative': {
+          // A scrolled wheel names where it landed; every other entry point takes one step.
+          const offset = ctx.args?.offset === undefined ? action.offset : stepOffset(ctx.args.offset);
+          result = offset ? await enqueue(() => tabOps.activateRelative(ctx.windowId, offset)) : { status: 'noop', message: '', notify: false };
+          break;
+        }
         case 'close-right': {
           const { closedCount } = await enqueue(() => closeRight(ctx.windowId));
           result = closedCount ? ok(t('bg.tabs.closed', { count: closedCount })) : { status: 'noop', message: t('bg.tabs.nothingRight'), notify: true };
@@ -314,7 +406,7 @@ export function createController(api, { license: licenseOptions } = {}) {
       actions: listActions(settings).map(action => ({
         id: action.id, name: action.name, category: action.category, keywords: action.keywords,
         command: action.command, web: action.web, panelInput: action.panelInput, requiresSelection: action.requiresSelection,
-        kind: action.kind, mode: action.mode ?? null, targetId: action.targetId ?? null,
+        kind: action.kind, mode: action.mode ?? null, targetId: action.targetId ?? null, offset: action.offset ?? action.direction ?? 0,
         monogram: targetFor(action) ? targetMonogram(targetFor(action)) : '',
         native: nativeByName.get(action.id)?.shortcut ?? '', nativeCombo: nativeByName.get(action.id)?.combo ?? '',
         suggested: action.command ? suggestedFor(action.id) : '',
@@ -373,6 +465,9 @@ export function createController(api, { license: licenseOptions } = {}) {
       platform: status.platform,
       canBack: Boolean(findTarget(history, -1, active.id)),
       canForward: Boolean(findTarget(history, 1, active.id)),
+      // How far a scrolled history gesture may go each way; it stops at the ends.
+      backReach: historyReach(history, -1, active.id, MAX_HISTORY_ENTRIES),
+      forwardReach: historyReach(history, 1, active.id, MAX_HISTORY_ENTRIES),
       rightCount: tabs.filter(tab => tab.index > active.index && !tab.pinned).length,
       tabCount: tabs.length,
       targets: targetList.map(target => ({ id: target.id, name: target.name, capability: target.capability, granted: target.granted })),
@@ -406,6 +501,9 @@ export function createController(api, { license: licenseOptions } = {}) {
   // ---------------------------------------------------------------- events
 
   function onActivated({ tabId, windowId }) {
+    // Switching tabs resets Chrome's selection, so the snapshot from before it no longer applies,
+    // even if the user comes back to the same tab and starts again.
+    if (previews.get(windowId)?.activeId !== tabId) dropPreview(windowId);
     const pending = (expectedActivations.get(windowId) ?? []).filter(item => Date.now() - item.time < ACTIVATION_MARKER_TTL);
     const match = pending.findIndex(item => item.tabId === tabId);
     if (match !== -1) pending.splice(match, 1);
@@ -438,7 +536,7 @@ export function createController(api, { license: licenseOptions } = {}) {
 
   /** The wheel's messages. Our own pages in a tab send them too, because the settings page loads
    *  the same bundle; everything else an extension page sends stays on the trusted panel path. */
-  const OVERLAY_MESSAGES = new Set(['overlay-state', 'overlay-action', 'overlay-confirm-action']);
+  const OVERLAY_MESSAGES = new Set(['overlay-state', 'overlay-action', 'overlay-confirm-action', 'overlay-preview', 'overlay-preview-clear']);
 
   async function handleContentMessage(message, sender) {
     const settings = await settingsStore.get();
@@ -456,14 +554,21 @@ export function createController(api, { license: licenseOptions } = {}) {
       if (status.keymap.map[message.combo] !== action.id) return { status: 'ignored', message: '' };
       return runAction(action.id, ctx);
     }
-    if (message.type === 'overlay-state' || message.type === 'overlay-action' || message.type === 'overlay-confirm-action') {
+    if (OVERLAY_MESSAGES.has(message.type)) {
       // The overlay is only reachable while the user has enabled it, and only from the tab the
       // user is actually looking at; actions still go through the shared dispatcher.
       if (!settings.overlay.enabled) return { status: 'ignored', message: '' };
       if (message.type === 'overlay-state') return enqueue(() => overlayState(ctx));
+      if (message.type === 'overlay-preview-clear') return inPreviewOrder(() => clearPreview(ctx.windowId));
       // Only what the wheel draws: an action sitting in one of its sectors.
       const action = getAction(message.id, settings);
       if (!action || action.panelInput || !settings.overlay.slots.includes(action.id)) throw new Error(t('bg.error.unknownAction'));
+      if (message.type === 'overlay-preview') {
+        if (!PREVIEW_KINDS.has(action.kind) || !(await license.allowed())) return { status: 'ignored', message: '' };
+        return inPreviewOrder(() => previewStep(ctx.windowId, action, stepOffset(message.offset)));
+      }
+      // Whatever runs next, the preview selection must be gone first.
+      await inPreviewOrder(() => clearPreview(ctx.windowId));
       if (message.type === 'overlay-confirm-action') {
         if (action.kind !== 'close-right') throw new Error(t('bg.error.noConfirmNeeded'));
         await requireLicense();
@@ -496,7 +601,7 @@ export function createController(api, { license: licenseOptions } = {}) {
       }
       const relayed = relayGestures.get(tab.id);
       const frameId = relayed && message.gesture === relayed.id ? relayed.frameId : ctx.frameId;
-      return runAction(action.id, { ...ctx, frameId, origin: 'overlay' });
+      return runAction(action.id, { ...ctx, frameId, origin: 'overlay', args: message.offset === undefined ? undefined : { offset: message.offset } });
     }
     throw new Error(t('bg.error.panelOnly'));
   }
@@ -531,7 +636,8 @@ export function createController(api, { license: licenseOptions } = {}) {
         return ok(t('bg.tabs.closed', { count: closedCount }));
       });
       case 'navigate': await requireLicense(); return enqueue(async () => {
-        if (message.direction === -1 || message.direction === 1) await countAction(message.direction === -1 ? 'history-back' : 'history-forward', 'popup');
+        if (message.direction !== -1 && message.direction !== 1) throw new Error(t('bg.error.invalidDirection'));
+        await countAction(message.direction === -1 ? 'history-back' : 'history-forward', 'popup');
         const outcome = await navigate(message.windowId, message.direction);
         await noteResult(outcome);
         return outcome;

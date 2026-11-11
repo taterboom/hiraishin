@@ -83,6 +83,39 @@ export function findTarget(history, direction, currentTabId) {
   return null;
 }
 
+/** Successive presses of back (-1) or forward (1), each skipping the tab the previous reached. */
+function* presses(history, direction, currentTabId) {
+  let state = normalizeHistory(history);
+  let current = currentTabId;
+  for (let target = findTarget(state, direction, current); target; target = findTarget(state, direction, current)) {
+    yield target;
+    state = { entries: state.entries, cursor: target.cursor };
+    current = target.tabId;
+  }
+}
+
+/**
+ * Where `offset` presses of back (minus) or forward (plus) would land, as if each press had
+ * already happened. Stops at the ends rather than wrapping; null when not one step is possible.
+ */
+export function walkHistory(history, offset, currentTabId) {
+  if (!Number.isSafeInteger(offset) || offset === 0) return null;
+  let landed = null;
+  let step = 0;
+  for (const target of presses(history, Math.sign(offset), currentTabId)) {
+    landed = target;
+    if (++step === Math.abs(offset)) break;
+  }
+  return landed;
+}
+
+/** How many presses back (-1) or forward (1) still land somewhere, up to `limit`. */
+export function historyReach(history, direction, currentTabId, limit) {
+  let steps = 0;
+  for (const _ of presses(history, direction, currentTabId)) if (++steps === limit) break;
+  return steps;
+}
+
 /** Move after a successful history navigation; no activation is appended. */
 export function moveCursor(history, cursor) {
   const state = normalizeHistory(history);

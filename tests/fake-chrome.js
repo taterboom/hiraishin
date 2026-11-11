@@ -92,6 +92,17 @@ export function createFakeChrome({
         && (query.url === undefined || matchesUrl(item.url, [].concat(query.url))))
         .sort((a, b) => a.windowId - b.windowId || a.index - b.index)),
       get: async id => { if (data.beforeGet) await data.beforeGet(id); return clone(find(id)); },
+      // Like Chrome: the listed tabs become the whole selection and the first one is active.
+      highlight: async ({ windowId, tabs: indices }) => {
+        const list = [].concat(indices);
+        const siblings = data.tabs.filter(item => item.windowId === windowId);
+        const first = siblings.find(item => item.index === list[0]);
+        if (!first) throw new Error(`No tab at index: ${list[0]}`);
+        const wasActive = first.active;
+        for (const item of siblings) { item.active = item === first; item.highlighted = list.includes(item.index); }
+        if (!wasActive) emitActivation({ tabId: first.id, windowId });
+        return { id: windowId };
+      },
       update: async (id, changes) => {
         if (data.beforeUpdate) await data.beforeUpdate(id, changes);
         const found = find(id);

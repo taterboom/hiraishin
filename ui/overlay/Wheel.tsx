@@ -15,6 +15,9 @@ export const INNER_RADIUS = 80;
  *  what makes a flick that never left the middle harmless. It sits well inside the ring, so a
  *  flick commits as soon as its direction is clear rather than only once it reaches the icons. */
 export const DEAD_ZONE = 40;
+/** How long the pointer rests on one sector, or in the middle, before the centre explains it.
+ *  Quick flicks finish well inside this, so the centre stays clear for them. */
+export const HINT_DELAY = 1000;
 /** Sectors meet edge to edge: the ring is one continuous band and only the selected wedge is
  *  tinted, so there is nothing to separate. */
 
@@ -53,7 +56,7 @@ export function slotPercent(index: number, count: number): { left: number; top: 
   return { left: (x / WHEEL_SIZE) * 100, top: (y / WHEEL_SIZE) * 100 };
 }
 
-export function Wheel({ slots, activeIndex, position, hint, showHint = true, unavailable, rightCount,
+export function Wheel({ slots, activeIndex, position, hint, showHint = true, unavailable, rightCount, offset = null, scrollCue = false,
   onSelect, onActivate, allowEmpty = false, sectorLabel, busy = false, idleTitle = t('overlay.wheel.idleTitle'), idleHint = t('overlay.wheel.idleHint'),
   confirmHint = t('overlay.wheel.confirmHint') }: {
   /** One entry per sector, clockwise from twelve o'clock; null draws an empty wedge. */
@@ -66,6 +69,12 @@ export function Wheel({ slots, activeIndex, position, hint, showHint = true, una
   /** The live gesture reveals this after a dwell; the settings preview keeps it visible. */
   showHint?: boolean;
   rightCount?: number;
+  /** Set once scrolled: where the jump lands, in steps from the current tab. The tab strip shows
+   *  which tab that is, so the centre only needs the number. */
+  offset?: number | null;
+  /** Under the hint of a sector that counts steps: a rolling mouse wheel and ±1 say it can be
+   *  scrolled. Once scrolled the centre shows the number instead. */
+  scrollCue?: boolean;
   unavailable: (action: ActionInfo) => string;
   onSelect?: (index: number | null) => void;
   onActivate?: (index: number) => void;
@@ -134,11 +143,16 @@ export function Wheel({ slots, activeIndex, position, hint, showHint = true, una
             </div>
           );
         })}
-        {/* Keep the centre clear during quick gestures; dwell reveals the action and release hint. */}
-        {showHint && <div className="hub" data-active={Boolean(active)} data-dangerous={active?.kind === 'close-right'}>
+        {/* Keep the centre clear during quick gestures; dwell reveals the action and release hint.
+            Once scrolled, only the number: the tab strip already shows which tab it is. */}
+        {offset !== null && active
+          ? <div className="hub hub-offset" aria-live="polite">{offset > 0 ? `+${offset}` : offset < 0 ? `\u2212${-offset}` : '0'}</div>
+          : showHint && <div className="hub" data-active={Boolean(active)} data-dangerous={active?.kind === 'close-right'}>
           <span className="hub-name">{active?.kind === 'close-right' && rightCount !== undefined
-            ? t('overlay.wheel.closeRight', { count: rightCount }) : active ? active.name : idleTitle}</span>
+            ? t('overlay.wheel.closeRight', { count: rightCount })
+            : active ? active.name : idleTitle}</span>
           <span className="hub-hint">{active ? (reason || (active.kind === 'close-right' ? confirmHint : hint)) : idleHint}</span>
+          {scrollCue && active && <span className="hub-scroll" aria-hidden="true"><i className="hub-mouse"><i /></i>±1</span>}
         </div>}
       </div>
     </div>

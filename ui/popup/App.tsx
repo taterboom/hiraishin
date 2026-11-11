@@ -3,7 +3,7 @@ import { holdKeyLabel } from '../../src/keys.js';
 import { applyLocalePreference, t } from '../../src/i18n.js';
 import { api } from '../shared/api';
 import { unavailableReason } from '../shared/availability';
-import { Wheel, WHEEL_SIZE } from '../overlay/Wheel';
+import { HINT_DELAY, Wheel, WHEEL_SIZE } from '../overlay/Wheel';
 import { Confirmation, type CloseConfirmation } from '../overlay/Confirmation';
 import { SettingsGlyph } from './icons';
 import type { ActionInfo, ActionResult, LicenseView, PanelState } from '../shared/types';
@@ -36,7 +36,7 @@ export function App() {
   useLayoutEffect(() => {
     setHintVisible(false);
     if (!state || confirmation) return;
-    const timer = window.setTimeout(() => setHintVisible(true), 2000);
+    const timer = window.setTimeout(() => setHintVisible(true), HINT_DELAY);
     return () => window.clearTimeout(timer);
   }, [activeIndex, state, confirmation]);
 

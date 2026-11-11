@@ -4,11 +4,13 @@ import {
   MAX_HISTORY_ENTRIES,
   createHistory,
   findTarget,
+  historyReach,
   moveCursor,
   normalizeHistory,
   pruneHistory,
   recordVisit,
   replaceTab,
+  walkHistory,
 } from "../src/history.js";
 
 const visited = (...tabIds) => tabIds.reduce(recordVisit, createHistory());
@@ -154,4 +156,20 @@ test("history operations return detached state without mutating caller input", (
     assert.notEqual(next, state);
     assert.notEqual(next.entries, state.entries);
   }
+});
+
+test("several presses at once land where pressing one at a time would, stopping at the ends", () => {
+  const state = visited(1, 2, 1, 3);
+  assert.deepEqual(walkHistory(state, -1, 3), { tabId: 1, cursor: 2 });
+  assert.deepEqual(walkHistory(state, -2, 3), { tabId: 2, cursor: 1 }, "the second press skips the tab the first reached");
+  assert.deepEqual(walkHistory(state, -3, 3), { tabId: 1, cursor: 0 });
+  assert.deepEqual(walkHistory(state, -9, 3), { tabId: 1, cursor: 0 }, "too far stops at the oldest visit");
+  assert.equal(walkHistory(state, 1, 3), null, "nothing ahead of the newest visit");
+  assert.equal(walkHistory(state, 0, 3), null);
+  const back = moveCursor(state, 0);
+  assert.deepEqual(walkHistory(back, 2, 1), { tabId: 1, cursor: 2 });
+  assert.equal(historyReach(state, -1, 3, 200), 3);
+  assert.equal(historyReach(state, -1, 3, 2), 2, "reach is capped");
+  assert.equal(historyReach(back, 1, 1, 200), 3);
+  assert.deepEqual(state, { entries: [1, 2, 1, 3], cursor: 3 }, "nothing is mutated");
 });

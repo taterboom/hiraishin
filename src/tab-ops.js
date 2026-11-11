@@ -38,22 +38,38 @@ export function createTabOps(api) {
   }
 
   return {
-    async previousTab(windowId) {
+    /** The most recently used other tab in the window; null when it has no other tab. */
+    async previousTarget(windowId) {
       const { tabs, active } = await context(windowId);
       const target = recent(tabs, active)[0];
-      if (!target) return { status: 'noop', message: t('bg.tabs.noOther') };
-      await api.tabs.update(target.id, { active: true });
-      return { status: 'ok', tabId: target.id };
+      return target ? { active, target } : null;
+    },
+
+    async previousTab(windowId) {
+      const found = await this.previousTarget(windowId);
+      if (!found) return { status: 'noop', message: t('bg.tabs.noOther') };
+      await api.tabs.update(found.target.id, { active: true });
+      return { status: 'ok', tabId: found.target.id };
+    },
+
+    /** The tab `offset` places along the strip, wrapping at either end; null alone in a window.
+     *  One lap either way reaches every tab, so the offset is held to tabs − 1 each way: the same
+     *  range the wheel counts in, so its number and the target always agree. */
+    async relativeTarget(windowId, offset) {
+      const { tabs, active } = await context(windowId);
+      if (tabs.length <= 1) return null;
+      const length = tabs.length;
+      const lap = Math.max(-(length - 1), Math.min(length - 1, offset));
+      const position = tabs.findIndex(tab => tab.id === active.id);
+      return { active, target: tabs[(((position + lap) % length) + length) % length] };
     },
 
     /** The neighbour in the tab strip, wrapping at either end so the gesture always does something. */
     async activateRelative(windowId, offset) {
-      const { tabs, active } = await context(windowId);
-      if (tabs.length <= 1) return { status: 'noop', message: t('bg.tabs.noOther') };
-      const position = tabs.findIndex(tab => tab.id === active.id);
-      const target = tabs[(position + offset + tabs.length) % tabs.length];
-      await api.tabs.update(target.id, { active: true });
-      return { status: 'ok', tabId: target.id };
+      const found = await this.relativeTarget(windowId, offset);
+      if (!found) return { status: 'noop', message: t('bg.tabs.noOther') };
+      await api.tabs.update(found.target.id, { active: true });
+      return { status: 'ok', tabId: found.target.id };
     },
 
     async move(windowId, direction) {

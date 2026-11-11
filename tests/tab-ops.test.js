@@ -99,6 +99,16 @@ test('the neighbouring tab is the one beside it in the strip, wrapping at both e
   assert.equal((await ops.activateRelative(1, 1)).tabId, 1, 'past the last tab comes the first, pinned included');
   assert.equal((await ops.activateRelative(1, -1)).tabId, 3, 'and back the other way');
   assert.equal(env.active(2), 9, 'other windows are untouched');
+  assert.equal((await ops.activateRelative(1, -2)).tabId, 1, 'several steps at once, wrapping past the end');
+  assert.equal((await ops.activateRelative(1, 4)).tabId, 3, 'held to one lap: tabs − 1 each way');
   const lonely = createTabOps(createFakeChrome({ tabs: [tab(1, 1, 0, true)] }).api);
   assert.equal((await lonely.activateRelative(1, 1)).status, 'noop', 'nowhere to go in a one-tab window');
+});
+
+test('a long strip walks the whole lap: the offset shown is the offset taken', async () => {
+  const tabs = Array.from({ length: 202 }, (_, index) => tab(index + 1, 1, index, index === 0));
+  const ops = createTabOps(createFakeChrome({ tabs }).api);
+  assert.equal((await ops.relativeTarget(1, 201)).target.id, 202, 'past 200 steps still lands where counted');
+  assert.equal((await ops.relativeTarget(1, 250)).target.id, 202, 'beyond one lap it holds at tabs − 1');
+  assert.equal((await ops.relativeTarget(1, -201)).target.id, 2);
 });

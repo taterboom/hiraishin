@@ -224,6 +224,141 @@ test('the settings page drives the same wheel, and its other messages stay on th
     'turning the wheel off turns it off here too');
 });
 
+test('scrolling previews the target in the tab strip; release jumps there in one activation', async () => {
+  const env = browser({ settings: { overlay: { enabled: true, slots: ['activate-left-tab', 'duplicate-tab', null, null] } },
+    tabs: [tab(1, 1, 0), tab(2, 1, 1), tab(3, 1, 2), tab(4, 1, 3, true), tab(10, 2, 0, true)] });
+  await env.ready();
+  const selected = () => env.data.tabs.filter(item => item.windowId === 1 && item.highlighted).map(item => item.id);
+  assert.deepEqual(await env.message('overlay-preview', { id: 'activate-left-tab', offset: -2 }, pageSender(4)),
+    {});
+  assert.equal(env.active(1), 4, 'previewing never switches tabs');
+  assert.deepEqual(selected(), [2, 4]);
+  await env.message('overlay-preview', { id: 'activate-left-tab', offset: -3 }, pageSender(4));
+  assert.deepEqual(selected(), [1, 4], 'the selection follows the count, never piling up');
+  await env.message('overlay-preview-clear', {}, pageSender(4));
+  assert.deepEqual(selected(), [4], 'cancelling leaves only the active tab selected');
+  assert.deepEqual(await env.message('overlay-preview', { id: 'duplicate-tab', offset: 2 }, pageSender(4)),
+    { status: 'ignored', message: '' }, 'only tab-switching actions preview');
+
+  await env.message('overlay-preview', { id: 'activate-left-tab', offset: 1 }, pageSender(4));
+  assert.deepEqual(selected(), [1, 4], 'past 0 a left gesture walks right, wrapping at the end');
+  await env.message('overlay-preview', { id: 'activate-left-tab', offset: 0 }, pageSender(4));
+  assert.deepEqual(selected(), [4], 'at 0 nothing else is selected');
+  await env.message('overlay-preview', { id: 'activate-left-tab', offset: -3 }, pageSender(4));
+  assert.equal((await env.message('overlay-action', { id: 'activate-left-tab', offset: -3 }, pageSender(4))).status, 'ok');
+  assert.equal(env.active(1), 1);
+  assert.deepEqual(selected(), [1]);
+  assert.deepEqual(env.history(1).entries.slice(-2), [4, 1], 'one jump is one visit, not one per step');
+  assert.equal(env.active(2), 10, 'other windows are untouched');
+});
+
+test('a scrolled history gesture previews and jumps several visits at once, past 0 into forward', async () => {
+  const env = browser({ settings: { overlay: { enabled: true, slots: ['history-back', 'history-forward', null, null] } },
+    tabs: [tab(1, 1, 0), tab(2, 1, 1), tab(3, 1, 2), tab(4, 1, 3, true)],
+    histories: { 1: { entries: [1, 2, 3, 4], cursor: 3 } } });
+  await env.ready();
+  const selected = () => env.data.tabs.filter(item => item.windowId === 1 && item.highlighted).map(item => item.id);
+  const { state } = await env.message('overlay-state', {}, pageSender(4));
+  assert.deepEqual([state.backReach, state.forwardReach], [3, 0]);
+  await env.message('overlay-preview', { id: 'history-back', offset: -2 }, pageSender(4));
+  assert.deepEqual(selected(), [2, 4]);
+  assert.equal(env.active(1), 4, 'previewing never switches tabs');
+  assert.equal(env.history(1).cursor, 3, 'nor moves the history cursor');
+  assert.equal((await env.message('overlay-action', { id: 'history-back', offset: -3 }, pageSender(4))).status, 'ok');
+  assert.equal(env.active(1), 1);
+  assert.deepEqual(env.history(1), { entries: [1, 2, 3, 4], cursor: 0 }, 'one cursor move, no visit added');
+  assert.deepEqual(selected(), [1]);
+
+  // From the oldest visit a back gesture scrolled past 0 goes forward.
+  assert.equal((await env.message('overlay-action', { id: 'history-back', offset: 2 }, pageSender(1))).status, 'ok');
+  assert.equal(env.active(1), 3);
+  assert.equal(env.history(1).cursor, 2);
+});
+
+test('ending a preview gives back the selection the user had, which copying links relies on', async () => {
+  const env = browser({ settings: { overlay: { enabled: true, slots: ['activate-left-tab', 'activate-right-tab', null, null] } },
+    tabs: [tab(1, 1, 0, true), tab(2, 1, 1), tab(3, 1, 2), tab(4, 1, 3)] });
+  await env.ready();
+  const selected = () => env.data.tabs.filter(item => item.windowId === 1 && item.highlighted).map(item => item.id);
+  await env.api.tabs.highlight({ windowId: 1, tabs: [0, 2] });
+  assert.deepEqual(selected(), [1, 3], 'the user selected A and C');
+  await env.message('overlay-preview', { id: 'activate-right-tab', offset: 1 }, pageSender(1));
+  assert.deepEqual(selected(), [1, 2], 'the preview shows only where the jump lands');
+  await env.message('overlay-preview', { id: 'activate-left-tab', offset: -1 }, pageSender(1));
+  assert.deepEqual(selected(), [1, 4]);
+  await env.message('overlay-preview-clear', {}, pageSender(1));
+  assert.deepEqual(selected(), [1, 3], 'cancelling restores A and C, not just the active tab');
+  assert.equal(env.active(1), 1);
+
+  await env.message('overlay-preview', { id: 'activate-right-tab', offset: 1 }, pageSender(1));
+  await env.message('overlay-preview', { id: 'activate-right-tab', offset: 0 }, pageSender(1));
+  assert.deepEqual(selected(), [1, 3], 'scrolling back to 0 restores it too');
+});
+
+test('a preview restores the selection from before its own gesture, never one left by an earlier tab', async () => {
+  const env = browser({ settings: { overlay: { enabled: true, slots: ['activate-left-tab', 'activate-right-tab', null, null] } },
+    tabs: [tab(1, 1, 0, true), tab(2, 1, 1), tab(3, 1, 2), tab(4, 1, 3), tab(5, 1, 4)] });
+  await env.ready();
+  const selected = () => env.data.tabs.filter(item => item.windowId === 1 && item.highlighted).map(item => item.id);
+  const index = id => env.data.tabs.find(item => item.id === id).index;
+  // A with C selected previews B, then the user switches away; A's clear arrives too late to count.
+  await env.api.tabs.highlight({ windowId: 1, tabs: [index(1), index(3)] });
+  await env.message('overlay-preview', { id: 'activate-right-tab', offset: 1 }, pageSender(1));
+  await env.visit(2);
+  assert.deepEqual(await env.message('overlay-preview-clear', {}, pageSender(1)), { status: 'ignored', message: '' });
+  // On B the user selects B and D, then previews from B and cancels.
+  await env.api.tabs.highlight({ windowId: 1, tabs: [index(2), index(4)] });
+  await env.message('overlay-preview', { id: 'activate-right-tab', offset: 1 }, pageSender(2));
+  assert.deepEqual(selected(), [2, 3]);
+  await env.message('overlay-preview-clear', {}, pageSender(2));
+  assert.deepEqual(selected(), [2, 4], 'B and D come back, not what A had');
+
+  // Back on A, a fresh selection is the one restored, even though A started the earlier preview.
+  await env.message('overlay-preview', { id: 'activate-right-tab', offset: 1 }, pageSender(2));
+  await env.visit(1);
+  await env.api.tabs.highlight({ windowId: 1, tabs: [index(1), index(5)] });
+  await env.message('overlay-preview', { id: 'activate-right-tab', offset: 1 }, pageSender(1));
+  await env.message('overlay-preview-clear', {}, pageSender(1));
+  assert.deepEqual(selected(), [1, 5], 'A and E, the selection made after returning');
+});
+
+test('a forgotten preview never resets a selection made on another tab', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const env = browser({ settings: { overlay: { enabled: true, slots: ['activate-left-tab', 'activate-right-tab', null, null] } },
+    tabs: [tab(1, 1, 0, true), tab(2, 1, 1), tab(3, 1, 2), tab(4, 1, 3)] });
+  await env.ready();
+  const selected = () => env.data.tabs.filter(item => item.windowId === 1 && item.highlighted).map(item => item.id);
+  await env.message('overlay-preview', { id: 'activate-right-tab', offset: 1 }, pageSender(1));
+  await env.visit(3);
+  await env.api.tabs.highlight({ windowId: 1, tabs: [2, 3] });
+  t.mock.timers.tick(20000);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.deepEqual(selected(), [3, 4], 'the expired preview leaves the new selection alone');
+});
+
+test('a scrolled strip walk past 200 tabs previews and lands on the counted tab', async () => {
+  const tabs = Array.from({ length: 202 }, (_, index) => tab(index + 1, 1, index, index === 0));
+  const env = browser({ settings: { overlay: { enabled: true, slots: ['activate-right-tab', null, null, null] } }, tabs });
+  await env.ready();
+  await env.message('overlay-preview', { id: 'activate-right-tab', offset: 201 }, pageSender(1));
+  assert.deepEqual(env.data.tabs.filter(item => item.highlighted).map(item => item.id), [1, 202]);
+  assert.equal((await env.message('overlay-action', { id: 'activate-right-tab', offset: 201 }, pageSender(1))).status, 'ok');
+  assert.equal(env.active(1), 202);
+});
+
+test('the switch-back sector shows the most recently used other tab before running', async () => {
+  const env = browser({ settings: { overlay: { enabled: true, slots: ['switch-previous-tab', null, null, null] } },
+    tabs: [tab(1, 1, 0, false, { lastAccessed: 30 }), tab(2, 1, 1, false, { lastAccessed: 50 }), tab(3, 1, 2, true, { lastAccessed: 60 })] });
+  await env.ready();
+  const selected = () => env.data.tabs.filter(item => item.windowId === 1 && item.highlighted).map(item => item.id);
+  await env.message('overlay-preview', { id: 'switch-previous-tab' }, pageSender(3));
+  assert.deepEqual(selected(), [2, 3]);
+  assert.equal(env.active(1), 3);
+  assert.equal((await env.message('overlay-action', { id: 'switch-previous-tab' }, pageSender(3))).status, 'ok');
+  assert.equal(env.active(1), 2);
+  assert.deepEqual(selected(), [2]);
+});
+
 test('wheel close only prepares a count; explicit confirmation closes the approved tabs once', async () => {
   const env = browser({ settings: { overlay: { enabled: true } },
     tabs: [tab(1, 1, 0, true), tab(2, 1, 1, false, { pinned: true }), tab(3, 1, 2), tab(4, 1, 3), tab(10, 2, 0, true)] });

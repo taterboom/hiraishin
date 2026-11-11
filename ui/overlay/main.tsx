@@ -3,9 +3,10 @@
 // page styles and scripts out of the UI.
 import { createRoot, type Root } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { WHEEL_SIZE, Wheel, sectorAt } from './Wheel';
+import { HINT_DELAY, WHEEL_SIZE, Wheel, sectorAt } from './Wheel';
 import { Confirmation, type CloseConfirmation } from './Confirmation';
 import { traceEnd, traceMove, traceOpen } from './trace';
+import { createStepper, scrollAmount } from '../../src/scroll-steps.js';
 import { MODIFIER_KEYS, isHoldKey, otherModifierDown, resolveHoldCode } from '../../src/keys.js';
 import { LOCALE_TAGS, getLocale, setLocale, t } from '../../src/i18n.js';
 import { unavailableReason, type AvailabilityState } from '../shared/availability';
@@ -13,13 +14,14 @@ import type { ActionInfo } from '../shared/types';
 import sharedMarkCss from '../shared/action-mark.css';
 import overlayCss from './styles.css';
 
-interface OverlayState extends AvailabilityState { slots: (ActionInfo | null)[]; platform: string }
+interface OverlayState extends AvailabilityState {
+  slots: (ActionInfo | null)[]; platform: string; backReach: number; forwardReach: number;
+}
 
 const HOST_ATTR = 'data-hiraishin-overlay';
 /** How far the mouse has to move, once the key has been held long enough, before the wheel shows.
  *  Small enough to feel immediate, large enough that a resting hand never trips it. */
 const FLICK_START = 6;
-const HINT_DELAY = 2000;
 const localeTag = () => LOCALE_TAGS[getLocale() as keyof typeof LOCALE_TAGS];
 const guard = globalThis as Record<string, unknown>;
 if (!guard.__hiraishinOverlay) {
@@ -39,6 +41,29 @@ if (!guard.__hiraishinOverlay) {
   let confirmation: CloseConfirmation | null = null;
   let gestureVersion = 0;
   let consumeClick = false;
+  /** Where the selected stepping action lands, in steps: minus is left or back, plus is right
+   *  or forward, 0 stays put. Its target is selected in the tab strip as soon as the sector is;
+   *  null while no stepping sector is selected. */
+  let offset: number | null = null;
+  /** The centre shows the number only once the wheel has been scrolled. */
+  let scrolled = false;
+  /** The selected sector's target is selected in the tab strip and has to be cleared. */
+  let previewing = false;
+  const stepper = createStepper();
+  /** The selected sector counts steps, so its hint says the wheel can be scrolled. */
+  function cueWanted() {
+    const action = activeIndex === null ? null : state?.slots[activeIndex];
+    return Boolean(state && steppable(action) && !unavailableReason(action, state));
+  }
+  /** Previews, clears and the action that ends the gesture leave one at a time: messages may
+   *  otherwise overtake one another, and a preview landing after its clear would leave a tab
+   *  selected in the strip. */
+  let outbox: Promise<unknown> = Promise.resolve();
+  function sendInOrder(message: Record<string, unknown>) {
+    const reply = outbox.then(() => chrome.runtime.sendMessage(message));
+    outbox = reply.catch(() => {});
+    return reply;
+  }
   /** The wheel's centre in viewport coordinates; every direction is measured from here. */
   let position = { left: 0, top: 0 };
   /** Held long enough; now waiting for the flick that actually opens the wheel. */
@@ -83,6 +108,9 @@ if (!guard.__hiraishinOverlay) {
     // cover what they need to. A host that blankets the viewport only adds a full-page hit-test
     // layer over every page we run in.
     host.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;z-index:2147483646;display:none;';
+    // Not passive: an open wheel turns scrolling into steps, so the page must not scroll too. It
+    // sits on the host, which is only displayed during a gesture, so ordinary scrolling pays nothing.
+    host.addEventListener('wheel', onWheel, { passive: false });
     shadow = host.attachShadow({ mode: 'closed' });
     const style = document.createElement('style');
     style.textContent = `${sharedMarkCss}\n${overlayCss}`;
@@ -104,10 +132,11 @@ if (!guard.__hiraishinOverlay) {
     flushSync(() => root!.render(
       confirmation ? <Confirmation state={confirmation} onCancel={hide} onConfirm={() => { void confirmClose(); }} />
       : <Wheel slots={state!.slots} activeIndex={activeIndex} position={position}
-        hint={t('overlay.hint.release')} rightCount={state!.rightCount}
+        hint={t('overlay.hint.release')} rightCount={state!.rightCount} offset={scrolled ? offset : null}
+        scrollCue={cueWanted()}
         unavailable={action => unavailableReason(action, state!)}
         // Locked, a quick flick must not end in silence: show why straight away, not after a dwell.
-        showHint={open && (hintVisible || Boolean(state!.locked))}
+        showHint={open && (hintVisible || scrolled || Boolean(state!.locked))}
         idleTitle={state!.locked ? t(`popup.license.${state!.locked}`) : undefined}
         idleHint={state!.locked ? t('overlay.wheel.lockedHint') : undefined} />,
     ));
@@ -151,6 +180,7 @@ if (!guard.__hiraishinOverlay) {
     clearHint();
     open = false;
     activeIndex = null;
+    resetSteps();
     confirmation = null;
     remote = null;
     if (catcher) catcher.style.display = 'none';
@@ -167,8 +197,14 @@ if (!guard.__hiraishinOverlay) {
         void prepareClose();
         return;
       }
-      // A relayed gesture names itself, so a send reads the selection in the frame it began in.
-      chrome.runtime.sendMessage({ type: 'overlay-action', id: action.id, gesture: remote?.gesture }).catch(() => {});
+      // Scrolled back to 0 means staying here: nothing runs, and hide() clears the selection.
+      if (offset !== 0) {
+        // A relayed gesture names itself, so a send reads the selection in the frame it began in.
+        // The worker clears the preview selection itself before running, in order.
+        sendInOrder({ type: 'overlay-action', id: action.id, gesture: remote?.gesture, offset: offset ?? undefined }).catch(() => {});
+        offset = null;
+        previewing = false;
+      }
     }
     hide();
   }
@@ -239,6 +275,64 @@ if (!guard.__hiraishinOverlay) {
     }, HINT_DELAY);
   }
 
+  /** Actions whose steps add up into one jump. */
+  const steppable = (action: ActionInfo | null | undefined): action is ActionInfo =>
+    action?.kind === 'activate-relative' || action?.kind === 'history';
+  /** How far each way the action can go: the strip wraps, so one lap reaches every tab; the
+   *  history stops at its ends. The worker applies the same limits (tab-ops.relativeTarget,
+   *  history.walkHistory), so the number shown is always where the jump lands. */
+  function reach(action: ActionInfo) {
+    if (action.kind === 'history') return { min: -(state?.backReach ?? 0), max: state?.forwardReach ?? 0 };
+    const lap = Math.max(1, (state?.tabCount ?? 1) - 1);
+    return { min: -lap, max: lap };
+  }
+
+  /** Actions whose target is shown in the tab strip as soon as their sector is selected. */
+  const previewable = (action: ActionInfo | null | undefined): action is ActionInfo =>
+    action?.kind === 'previous-tab' || steppable(action);
+
+  /** A tab-switching sector was selected: show where it goes, a walk's first step included. */
+  function startPreview(action: ActionInfo) {
+    stepper.reset();
+    scrolled = false;
+    offset = steppable(action) ? action.offset ?? 0 : null;
+    previewing = true;
+    sendInOrder({ type: 'overlay-preview', id: action.id, offset: offset ?? undefined }).catch(() => {});
+  }
+
+  /** No such sector selected any more: drop the count and the tab strip selection. */
+  function resetSteps() {
+    stepper.reset();
+    scrolled = false;
+    offset = null;
+    if (!previewing) return;
+    previewing = false;
+    sendInOrder({ type: 'overlay-preview-clear' }).catch(() => {});
+  }
+
+  function onWheel(event: WheelEvent) {
+    if (!open) return;
+    // Pinch-zoom arrives as a wheel event with ctrlKey; neither may reach the page. Held as the
+    // trigger, Control sets ctrlKey on every scroll too, so then the flag says nothing.
+    event.preventDefault();
+    const pinch = event.ctrlKey && holdKey() !== 'Control';
+    if (!event.isTrusted || pinch || activeIndex === null || !state) return;
+    const action = state.slots[activeIndex];
+    if (!steppable(action) || unavailableReason(action, state)) return;
+    // A page cannot read the system setting; macOS ships with natural scrolling on.
+    const delta = stepper.feed(scrollAmount(event, state.platform === 'mac'), event.timeStamp);
+    if (!delta) return;
+    // The flick already took the first step; scrolling carries on from there, through 0 if need be.
+    const { min, max } = reach(action);
+    const next = Math.max(min, Math.min(max, (offset ?? action.offset ?? 0) + delta));
+    const first = !scrolled;
+    scrolled = true;
+    if (next === offset) { if (first) render(); return; }
+    offset = next;
+    render();
+    sendInOrder({ type: 'overlay-preview', id: action.id, offset }).catch(() => {});
+  }
+
   /** Which sector the pointer is pointing at, by direction from the centre. Distance only decides
    *  whether anything is selected at all, never which one. */
   function pick(x: number, y: number) {
@@ -246,6 +340,9 @@ if (!guard.__hiraishinOverlay) {
     const next = sectorAt(x - position.left, y - position.top, state.slots.length);
     if (next === activeIndex) return;
     activeIndex = next;
+    const action = next === null ? null : state.slots[next];
+    if (previewable(action) && !unavailableReason(action, state)) startPreview(action);
+    else resetSteps();
     scheduleHint();
     render();
   }

@@ -60,6 +60,19 @@
 .hub-hint { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-size: 9px; line-height: 12px; color: #c4cdc1; }
 .hub[data-dangerous="true"] .hub-name { color: #ffe0a6; }
+/* Under a stepping sector's hint: a mouse whose wheel rolls, beside ±1. */
+.hub-scroll { display: flex; align-items: center; gap: 5px; margin-top: 2px; font-size: 12px; font-weight: 650;
+  line-height: 16px; font-variant-numeric: tabular-nums; }
+.hub-mouse { position: relative; width: 11px; height: 17px; border: 1.4px solid #e9ede8; border-radius: 6px;
+  box-sizing: border-box; }
+.hub-mouse i { position: absolute; left: 50%; top: 3px; width: 2px; height: 4px; margin-left: -1px; border-radius: 1px;
+  background: #f7faf3; animation: hub-roll 1.6s ease-in-out infinite; }
+@keyframes hub-roll { 0% { transform: none; opacity: 1; } 60% { transform: translateY(5px); opacity: 0; }
+  61% { transform: none; opacity: 0; } 100% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .hub-mouse i { animation: none; } }
+/* Scrolled: just the number, on a plate that keeps its size as the digits change. */
+.hub-offset { min-width: 72px; padding: 6px 12px; font-size: 34px; font-weight: 650; line-height: 40px;
+  font-variant-numeric: tabular-nums; }
 .confirmation-backdrop { color: #e9ede8;
   font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", sans-serif; }
 .confirmation-card { position: fixed; width: 304px; max-width: calc(100vw - 32px);

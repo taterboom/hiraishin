@@ -510,7 +510,7 @@ try {
     }
   })()`);
   overlayInputTrace = () => overlayPage.eval('window.__inputTrace');
-  const hold = { key: 'Alt', code: 'AltLeft', windowsVirtualKeyCode: 18, modifiers: 1 };
+  let hold = { key: 'Alt', code: 'AltLeft', windowsVirtualKeyCode: 18, modifiers: 1 };
   let pointerModifiers = 0;
   const holdKey = async (type) => {
     pointerModifiers = type === 'keyDown' ? hold.modifiers : 0;
@@ -679,6 +679,123 @@ try {
     if (extra.length > 1) await chrome.tabs.remove(extra[extra.length - 1].id);
     await chrome.tabs.update(${overlayTab}, { active: true }); })()`);
   await overlayPage.send('Page.bringToFront').catch(() => {});
+
+  // Scrolling while a stepping sector is selected: one notch is one more step, the target shows in
+  // the tab strip as part of the selection without being activated, and release jumps once.
+  {
+    await sw.eval(`(async () => { const tabs = await chrome.tabs.query({ windowId: ${windowId} });
+      for (let i = tabs.length; i < 4; i++) await chrome.tabs.create({ windowId: ${windowId}, url: '${WWW}/fixture.html?title=Pad' + i, active: false, index: 0 });
+      await chrome.tabs.update(${overlayTab}, { active: true }); })()`);
+    await overlayPage.send('Page.bringToFront').catch(() => {});
+    await sleep(500);
+    const strip = () => sw.eval(`chrome.tabs.query({ windowId: ${windowId} }).then(tabs => ({
+      active: tabs.find(t => t.active).id, selected: tabs.filter(t => t.highlighted).map(t => t.id).sort((a, b) => a - b), ids: tabs.map(t => t.id) }))`);
+    const before = await strip();
+    const at = before.ids.indexOf(overlayTab);
+    const expected = before.ids[(((at - 2) % before.ids.length) + before.ids.length) % before.ids.length];
+    // Up is further on a horizontal sector; with macOS natural scrolling that is a positive delta.
+    const notch = () => overlayPage.send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: openSpace.x, y: openSpace.y,
+      deltaX: 0, deltaY: mac ? 100 : -100, modifiers: pointerModifiers });
+
+    const cueRows = () => withTimeout(piercedRows(overlayPage, entry => entry.class === 'hub-scroll'), 5000, 'find the scroll cue');
+    await summon(openSpace);
+    const leftAim = await withTimeout(slotPointOf(overlayPage, 'activate-left-tab'), 5000, 'find the left-tab badge');
+    await movePointer(leftAim.x, leftAim.y);
+    await sleep(500);
+    const cueEarly = (await cueRows()).length;
+    await sleep(800);
+    const cueShown = (await cueRows()).length;
+    (cueEarly === 0 && cueShown === 1)
+      ? pass('resting on a stepping sector adds the scroll cue under its hint, once the hint shows')
+      : fail('scroll cue shown', JSON.stringify({ cueEarly, cueShown }));
+    const neighbour = before.ids[(at - 1 + before.ids.length) % before.ids.length];
+    const selectedOnly = await strip();
+    (selectedOnly.active === overlayTab && selectedOnly.selected.join() === [overlayTab, neighbour].sort((a, b) => a - b).join())
+      ? pass('selecting the left-tab sector already selects its neighbour in the strip, before any scrolling')
+      : fail('wheel selection preview', JSON.stringify({ selectedOnly, neighbour }));
+    await notch();
+    await sleep(500);
+    const previewed = await strip();
+    (previewed.active === overlayTab && previewed.selected.join() === [overlayTab, expected].sort((a, b) => a - b).join())
+      ? pass('scrolling one notch selects the tab two to the left in the strip without switching to it')
+      : fail('wheel scroll preview', JSON.stringify({ before, previewed, expected }));
+    const cueAfterScroll = (await cueRows()).length;
+    (cueAfterScroll === 0)
+      ? pass('scrolling replaces the hint and its cue with the number')
+      : fail('scroll cue after scrolling', JSON.stringify({ cueAfterScroll }));
+    await holdKey('keyUp');
+    await sleep(900);
+    const landed = await strip();
+    (landed.active === expected && landed.selected.join() === String(expected))
+      ? pass('releasing after scrolling jumps straight to the previewed tab and leaves no extra selection')
+      : fail('wheel scroll release', JSON.stringify({ landed, expected }));
+
+    await sw.eval(`chrome.tabs.update(${overlayTab}, { active: true })`);
+    await overlayPage.send('Page.bringToFront').catch(() => {});
+    await sleep(500);
+    await summon(openSpace);
+    const leftAgain = await withTimeout(slotPointOf(overlayPage, 'activate-left-tab'), 5000, 'find the left-tab badge again');
+    await movePointer(leftAgain.x, leftAgain.y);
+    await sleep(250);
+    await notch();
+    await sleep(500);
+    await pressEscape();
+    await holdKey('keyUp');
+    await sleep(700);
+    const cancelled = await strip();
+    (cancelled.active === overlayTab && cancelled.selected.join() === String(overlayTab))
+      ? pass('cancelling a scrolled wheel clears the tab strip selection')
+      : fail('wheel scroll cancel', JSON.stringify({ cancelled }));
+
+    // The selection is the user's: one they made before the gesture survives a cancelled preview.
+    const userPick = before.ids.find(id => id !== overlayTab && id !== neighbour);
+    await sw.eval(`(async () => { const tabs = await chrome.tabs.query({ windowId: ${windowId} });
+      const index = id => tabs.find(t => t.id === id).index;
+      await chrome.tabs.highlight({ windowId: ${windowId}, tabs: [index(${overlayTab}), index(${userPick})] }); })()`);
+    await sleep(300);
+    const picked = await strip();
+    await summon(openSpace);
+    const leftOnce = await withTimeout(slotPointOf(overlayPage, 'activate-left-tab'), 5000, 'find the left-tab badge for the selection check');
+    await movePointer(leftOnce.x, leftOnce.y);
+    await sleep(500);
+    const duringPreview = await strip();
+    await sleep(800);
+    const cueAgain = (await cueRows()).length;
+    (cueAgain === 1)
+      ? pass('the scroll cue keeps showing on later gestures, nothing is remembered')
+      : fail('scroll cue on a later gesture', JSON.stringify({ cueAgain }));
+    await pressEscape();
+    await holdKey('keyUp');
+    await sleep(700);
+    const restored = await strip();
+    const userSelection = [overlayTab, userPick].sort((a, b) => a - b).join();
+    (picked.selected.join() === userSelection && duringPreview.selected.join() === [overlayTab, neighbour].sort((a, b) => a - b).join()
+      && restored.active === overlayTab && restored.selected.join() === userSelection)
+      ? pass('a cancelled preview gives back the tabs the user had selected')
+      : fail('wheel preview restores selection', JSON.stringify({ picked, duringPreview, restored, userPick, neighbour }));
+    await sw.eval(`chrome.tabs.update(${overlayTab}, { active: true })`);
+
+    // Control as the trigger: every scroll then carries ctrlKey, which must not pass for a pinch.
+    await msg({ type: 'save-settings', settings: { ...settingsView.settings, overlay: { enabled: true, holdCode: 'Control', holdMs: 0 } } });
+    await sleep(700);
+    const optionHold = hold;
+    hold = { key: 'Control', code: 'ControlLeft', windowsVirtualKeyCode: 17, modifiers: 2 };
+    await summon(openSpace);
+    const leftControl = await withTimeout(slotPointOf(overlayPage, 'activate-left-tab'), 5000, 'find the left-tab badge under Control');
+    await movePointer(leftControl.x, leftControl.y);
+    await sleep(500);
+    await notch();
+    await sleep(500);
+    const underControl = await strip();
+    await pressEscape();
+    await holdKey('keyUp');
+    hold = optionHold;
+    await msg({ type: 'save-settings', settings: { ...settingsView.settings, overlay: { enabled: true, holdCode: 'auto', holdMs: 0 } } });
+    await sleep(700);
+    (underControl.active === overlayTab && underControl.selected.join() === [overlayTab, expected].sort((a, b) => a - b).join())
+      ? pass('with Control as the trigger, scrolling still adds steps instead of being taken for a pinch')
+      : fail('wheel scroll under Control', JSON.stringify({ underControl, expected }));
+  }
 
   // Trial over: the wheel still opens, but says why and runs nothing. It used to rely on a system
   // notification alone, and with those switched off a release did nothing without a word.

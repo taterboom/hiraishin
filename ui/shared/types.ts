@@ -7,6 +7,8 @@ export interface ActionInfo {
   id: string; name: string; category: string; keywords: string[];
   command: boolean; web: boolean; panelInput: 'index' | null; requiresSelection: boolean;
   kind: string; mode: TransferMode | null; targetId: string | null; monogram: string;
+  /** Where one step goes: -1 left or back, 1 right or forward, 0 for actions that do not step. */
+  offset?: number;
   native: string; nativeCombo: string; suggested: string; webBinding: string; shadowed: boolean; conflict: boolean;
 }
 export interface HistoryEntry { tabId: number; cursor: number; current: boolean; title: string; url: string }
